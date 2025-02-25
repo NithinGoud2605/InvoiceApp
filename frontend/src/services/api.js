@@ -15,8 +15,11 @@ apiClient.interceptors.request.use(
   (config) => {
     if (
       !config.url.includes('/auth/login') &&
-      !config.url.includes('/auth/register')
-    ) {
+      !config.url.includes('/auth/register') &&
+      !config.url.includes('/auth/forgot-password') &&
+      !config.url.includes('/auth/confirm-forgot-password') &&
+      !config.url.includes('/auth/confirm')
+    )  {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -45,6 +48,16 @@ export const login = async (credentials) => {
 
 export const logout = async () => {
   const response = await apiClient.post('/auth/logout');
+  return response.data;
+};
+
+export const forgotPassword = async (email) => {
+  const response = await apiClient.post('/auth/forgot-password', { email });
+  return response.data;
+};
+
+export const confirmForgotPassword = async (email, code, newPassword) => {
+  const response = await apiClient.post('/auth/confirm-forgot-password', { email, code, newPassword });
   return response.data;
 };
 

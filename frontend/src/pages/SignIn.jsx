@@ -16,10 +16,10 @@ import MuiCard from '@mui/material/Card';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 
-import ForgotPassword from '../components/ForgotPassword';
+import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
-import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
+import { GoogleIcon, SitemarkIcon } from '../components/CustomIcons';
 import { login } from '../services/api';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -118,7 +118,7 @@ export default function SignIn(props) {
       const userPass = formData.get('password');
 
       const response = await login({ email: userEmail, password: userPass });
-      // response.token or response.idToken may vary based on your backend
+      // Depending on your backend, response.token or response.idToken is stored
       localStorage.setItem('token', response.token || response.idToken);
       navigate('/dashboard');
     } catch (err) {
@@ -190,7 +190,7 @@ export default function SignIn(props) {
               control={<Checkbox value="remember" color="primary" />}
               label="Remember me"
             />
-            <ForgotPassword open={open} handleClose={handleClose} />
+            <ForgotPasswordDialog open={open} handleClose={handleClose} />
             <Button type="submit" fullWidth variant="contained">
               Sign in
             </Button>
@@ -214,21 +214,9 @@ export default function SignIn(props) {
             >
               Sign in with Google
             </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => alert('Sign in with Facebook')}
-              startIcon={<FacebookIcon />}
-            >
-              Sign in with Facebook
-            </Button>
             <Typography sx={{ textAlign: 'center' }}>
               Don&apos;t have an account?{' '}
-              <Link
-                href="/sign-up"
-                variant="body2"
-                sx={{ alignSelf: 'center' }}
-              >
+              <Link href="/sign-up" variant="body2" sx={{ alignSelf: 'center' }}>
                 Sign up
               </Link>
             </Typography>

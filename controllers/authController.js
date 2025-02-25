@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const crypto = require('crypto');
-const { User } = require('../models'); // Local DB model
+const { User } = require('../models'); // Local DB model, if needed
 
 // Update AWS region from environment variable or default
 AWS.config.update({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -21,9 +21,9 @@ exports.register = async (req, res, next) => {
     if (!name) {
       return res.status(400).json({ message: 'Name is required.' });
     }
-
+    
     const cognito = new AWS.CognitoIdentityServiceProvider();
-
+    
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -39,13 +39,14 @@ exports.register = async (req, res, next) => {
       if (err) {
         return res.status(400).json({ message: err.message || 'Sign up failed' });
       }
-
+      
+      // Create a record in your local database including the name
       await User.create({
         email,
-        name, // Ensure name is stored in the database
+        name,
         cognitoSub: data.UserSub
       });
-
+      
       return res.json({
         message: 'User registered. Please check your email for a confirmation code.',
         userSub: data.UserSub
@@ -55,7 +56,6 @@ exports.register = async (req, res, next) => {
     next(err);
   }
 };
-
 
 exports.confirm = async (req, res, next) => {
   try {
@@ -117,7 +117,6 @@ exports.login = async (req, res, next) => {
 };
 
 exports.logout = async (req, res, next) => {
-  // Logout is usually handled on the client side by clearing tokens.
   return res.json({ message: 'Logout is typically handled on the client side.' });
 };
 
@@ -146,6 +145,57 @@ exports.refresh = async (req, res, next) => {
         message: 'Token refreshed successfully',
         idToken: AuthenticationResult.IdToken,
         accessToken: AuthenticationResult.AccessToken
+      });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// --- NEW: Forgot Password ---
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const cognito = new AWS.CognitoIdentityServiceProvider();
+    const params = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email,
+      SecretHash: computeSecretHash(email)
+    };
+    
+    cognito.forgotPassword(params, (err, data) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || 'Forgot password failed' });
+      }
+      return res.json({
+        message: 'A password reset code has been sent to your email.',
+        data
+      });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.confirmForgotPassword = async (req, res, next) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    const cognito = new AWS.CognitoIdentityServiceProvider();
+    const params = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email,
+      ConfirmationCode: code,
+      Password: newPassword,
+      SecretHash: computeSecretHash(email)
+    };
+    
+    cognito.confirmForgotPassword(params, (err, data) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || 'Password reset confirmation failed' });
+      }
+      return res.json({
+        message: 'Password has been reset successfully.',
+        data
       });
     });
   } catch (err) {

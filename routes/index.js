@@ -22,6 +22,8 @@ router.post('/auth/register', authController.register);
 router.post('/auth/confirm', authController.confirm);
 router.post('/auth/login', authController.login);
 router.post('/auth/logout', authController.logout);
+router.post('/auth/forgot-password', authController.forgotPassword);
+router.post('/auth/confirm-forgot-password', authController.confirmForgotPassword);
 // If you implement refresh, uncomment below; otherwise, comment it out:
 // router.get('/auth/refresh', authController.refresh);
 
