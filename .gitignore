@@ -1,0 +1,33 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables (make sure to protect these)
+.env
+.env.*
+
+# Build output directories
+dist/
+build/
+
+# Cache directories
+.cache/
+coverage/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Certificates & keys (if stored locally)
+*.pem
+*.key
+
+# Temporary files
+tmp/
+temp/
