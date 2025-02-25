@@ -1,9 +1,7 @@
-// models/User.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   const User = sequelize.define('User', {
-    // Primary key
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -13,7 +11,7 @@ module.exports = (sequelize) => {
     cognitoSub: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true  // ensures each Cognito user is unique
+      unique: true
     },
     email: {
       type: DataTypes.STRING,
@@ -22,10 +20,11 @@ module.exports = (sequelize) => {
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: false,
+      defaultValue: 'Unknown' // Set a default value
     },
     role: {
-      type: DataTypes.ENUM('USER', 'ADMIN'),  // or store as string if you prefer
+      type: DataTypes.ENUM('USER', 'ADMIN'),
       defaultValue: 'USER'
     }
   }, {

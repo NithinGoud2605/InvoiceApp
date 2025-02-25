@@ -55,6 +55,7 @@ router.delete('/subscriptions/:id', requireAuth, subscriptionController.deleteSu
 router.get('/users/me', requireAuth, userController.getMe);
 router.put('/users/me', requireAuth, userController.updateMe);
 
+
 // Notifications (protected)
 router.get('/notifications', requireAuth, notificationController.getNotifications);
 router.post('/notifications/read', requireAuth, notificationController.markNotificationsRead);

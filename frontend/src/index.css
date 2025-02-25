@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Optional: custom overrides or additional global styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}

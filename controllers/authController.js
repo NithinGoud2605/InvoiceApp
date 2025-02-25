@@ -1,9 +1,8 @@
-// controllers/authController.js
 const AWS = require('aws-sdk');
 const crypto = require('crypto');
-const { User } = require('../models'); // Optional: for storing a local user record
+const { User } = require('../models'); // Local DB model
 
-// Update AWS region from environment variable
+// Update AWS region from environment variable or default
 AWS.config.update({ region: process.env.AWS_REGION || 'us-east-1' });
 
 // Helper function to compute the SecretHash
@@ -22,9 +21,9 @@ exports.register = async (req, res, next) => {
     if (!name) {
       return res.status(400).json({ message: 'Name is required.' });
     }
-    
+
     const cognito = new AWS.CognitoIdentityServiceProvider();
-    
+
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -32,7 +31,6 @@ exports.register = async (req, res, next) => {
       SecretHash: computeSecretHash(email),
       UserAttributes: [
         { Name: 'email', Value: email },
-        // Provide the name attribute (this satisfies the required name.formatted mapping)
         { Name: 'name', Value: name }
       ]
     };
@@ -41,13 +39,13 @@ exports.register = async (req, res, next) => {
       if (err) {
         return res.status(400).json({ message: err.message || 'Sign up failed' });
       }
-      
-      // Optionally, create a record in your local DB
+
       await User.create({
         email,
+        name, // Ensure name is stored in the database
         cognitoSub: data.UserSub
       });
-      
+
       return res.json({
         message: 'User registered. Please check your email for a confirmation code.',
         userSub: data.UserSub
@@ -57,6 +55,7 @@ exports.register = async (req, res, next) => {
     next(err);
   }
 };
+
 
 exports.confirm = async (req, res, next) => {
   try {
@@ -118,7 +117,7 @@ exports.login = async (req, res, next) => {
 };
 
 exports.logout = async (req, res, next) => {
-  // Logout is usually handled on the client by clearing tokens.
+  // Logout is usually handled on the client side by clearing tokens.
   return res.json({ message: 'Logout is typically handled on the client side.' });
 };
 
