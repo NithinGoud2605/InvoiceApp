@@ -21,11 +21,16 @@ module.exports = (sequelize) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'Unknown' // Set a default value
+      defaultValue: 'Unknown'
     },
     role: {
       type: DataTypes.ENUM('USER', 'ADMIN'),
       defaultValue: 'USER'
+    },
+    // NEW subscription column
+    isSubscribed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     tableName: 'users',
