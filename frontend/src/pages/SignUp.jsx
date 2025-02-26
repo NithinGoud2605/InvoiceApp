@@ -1,4 +1,3 @@
-// src/pages/SignUp.jsx
 import React from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -15,10 +14,9 @@ import Stack from '@mui/material/Stack';
 import MuiCard from '@mui/material/Card';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
-import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
+//import { GoogleIcon, FacebookIcon } from '../components/Mainpage/CustomIcons';
 import { register, confirmAccount } from '../services/api';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -31,9 +29,7 @@ const Card = styled(MuiCard)(({ theme }) => ({
   margin: 'auto',
   boxShadow:
     'hsla(220, 30%, 5%, 0.05) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.05) 0px 15px 35px -5px',
-  [theme.breakpoints.up('sm')]: {
-    width: '450px',
-  },
+  [theme.breakpoints.up('sm')]: { width: '450px' },
   ...theme.applyStyles('dark', {
     boxShadow:
       'hsla(220, 30%, 5%, 0.5) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.08) 0px 15px 35px -5px',
@@ -44,9 +40,7 @@ const SignUpContainer = styled(Stack)(({ theme }) => ({
   height: 'calc((1 - var(--template-frame-height, 0)) * 100dvh)',
   minHeight: '100%',
   padding: theme.spacing(2),
-  [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(4),
-  },
+  [theme.breakpoints.up('sm')]: { padding: theme.spacing(4) },
   '&::before': {
     content: '""',
     display: 'block',
@@ -74,7 +68,6 @@ export default function SignUp(props) {
   const [verificationCode, setVerificationCode] = React.useState('');
   const [registeredEmail, setRegisteredEmail] = React.useState('');
   const [confirmError, setConfirmError] = React.useState('');
-  
   const navigate = useNavigate();
 
   const validateInputs = () => {
@@ -123,7 +116,6 @@ export default function SignUp(props) {
         password: data.get('password'),
       };
       await register(userData);
-      // Save the email for the confirmation step
       setRegisteredEmail(userData.email);
       setIsVerificationStep(true);
     } catch (err) {
@@ -137,7 +129,6 @@ export default function SignUp(props) {
     event.preventDefault();
     try {
       await confirmAccount({ email: registeredEmail, code: verificationCode });
-      // On successful confirmation, redirect to Sign In page
       navigate('/sign-in');
     } catch (err) {
       console.error('Confirmation error:', err.response ? err.response.data : err.message);
@@ -151,7 +142,6 @@ export default function SignUp(props) {
       <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
       <SignUpContainer direction="column" justifyContent="space-between">
         <Card variant="outlined">
-          <SitemarkIcon />
           <Typography
             component="h1"
             variant="h4"
@@ -269,11 +259,7 @@ export default function SignUp(props) {
                 </Button>
                 <Typography sx={{ textAlign: 'center' }}>
                   Already have an account?{' '}
-                  <Link
-                    href="/sign-in"
-                    variant="body2"
-                    sx={{ alignSelf: 'center' }}
-                  >
+                  <Link href="/sign-in" variant="body2" sx={{ alignSelf: 'center' }}>
                     Sign in
                   </Link>
                 </Typography>

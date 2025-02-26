@@ -1,12 +1,14 @@
 // src/shared-theme/ColorModeIconDropdown.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
+import { ThemeContext } from './ThemeContext';
 
 export default function ColorModeIconDropdown(props) {
-  // You can add functionality to toggle the theme here
+  const { toggleTheme } = useContext(ThemeContext);
+
   return (
-    <IconButton color="inherit" {...props}>
+    <IconButton color="inherit" onClick={toggleTheme} {...props}>
       <Brightness4Icon />
     </IconButton>
   );

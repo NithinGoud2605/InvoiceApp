@@ -1,26 +1,29 @@
-// src/pages/LandingPage.jsx
 import React from 'react';
-import AppTheme from '../shared-theme/AppTheme';
-import Navbar from '../components/Navbar';
-import Hero from '../components/Hero';
-import LogoCollection from '../components/LogoCollection';
-import Features from '../components/Features';
-import Pricing from '../components/Pricing';
-import FAQ from '../components/FAQ';
-import Footer from '../components/Footer';
+import { Container, Box } from '@mui/material';
+import Navbar from '../components/Mainpage/Navbar';
+import Hero from '../components/Mainpage/Hero';
+import LogoCollection from '../components/Mainpage/LogoCollection';
+import FeaturesCarousel from '../components/Mainpage/FeaturesCarousel'; // New Rolling Features
+import Benefits from '../components/Mainpage/Benefits';
+import Pricing from '../components/Mainpage/Pricing';
+import FaqLong from '../components/Mainpage/FaqLong';
+import Footer from '../components/Mainpage/Footer';
 
-export default function LandingPage(props) {
+export default function LandingPage() {
   return (
-    <AppTheme {...props}>
+    <Box>
       <Navbar />
       <Hero />
-      <div>
+
+      <Container maxWidth="lg">
         <LogoCollection />
-        <Features />
+        <FeaturesCarousel /> {/* Features now roll inside a carousel */}
+        <Benefits />
         <Pricing />
-        <FAQ />
-        <Footer />
-      </div>
-    </AppTheme>
+        <FaqLong />
+      </Container>
+
+      <Footer />
+    </Box>
   );
 }

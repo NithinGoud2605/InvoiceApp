@@ -1,7 +1,6 @@
 // src/services/api.js
 import axios from 'axios';
 
-// Use Vite's environment variable; fallback to http://localhost:3000/api
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -10,7 +9,6 @@ const apiClient = axios.create({
   },
 });
 
-// Attach token from localStorage to every request, except for public endpoints.
 apiClient.interceptors.request.use(
   (config) => {
     if (
@@ -19,7 +17,7 @@ apiClient.interceptors.request.use(
       !config.url.includes('/auth/forgot-password') &&
       !config.url.includes('/auth/confirm-forgot-password') &&
       !config.url.includes('/auth/confirm')
-    )  {
+    ) {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

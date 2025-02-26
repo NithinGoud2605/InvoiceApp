@@ -21,7 +21,9 @@
     "openid-client": "^5.7.1",
     "pg": "^8.13.3",
     "pg-hstore": "^2.3.4",
+    "react-slick": "^0.30.3",
     "sequelize": "^6.37.5",
+    "slick-carousel": "^1.8.1",
     "stripe": "^17.7.0",
     "winston": "^3.17.0"
   },
