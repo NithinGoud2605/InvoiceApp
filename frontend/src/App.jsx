@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
       </Routes>
     </Router>
   );

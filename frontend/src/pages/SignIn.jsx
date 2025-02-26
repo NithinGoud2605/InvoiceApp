@@ -1,28 +1,57 @@
 // src/pages/SignIn.jsx
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
-import CssBaseline from '@mui/material/CssBaseline';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Divider from '@mui/material/Divider';
-import FormLabel from '@mui/material/FormLabel';
-import FormControl from '@mui/material/FormControl';
-import Link from '@mui/material/Link';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
-import MuiCard from '@mui/material/Card';
-import { styled } from '@mui/material/styles';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
+import {
+  Box,
+  Button,
+  Checkbox,
+  CssBaseline,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Link,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
 import { GoogleIcon, SitemarkIcon } from '../components/CustomIcons';
+import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 import { login } from '../services/api';
 
-const Card = styled(MuiCard)(({ theme }) => ({
+// A simple custom Google Sign-In button component using Google Identity Services
+function GoogleSignInButton({ onSuccess, onError }) {
+  // We'll use a ref to render the button into a div
+  const [loaded, setLoaded] = useState(false);
+  const ref = React.useRef();
+
+  React.useEffect(() => {
+    if (window.google && !loaded) {
+        window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            callback: (response) => {
+              if (response.credential) {
+                onSuccess(response.credential);
+              } else {
+                onError('No credential received');
+              }
+            }
+          });
+      window.google.accounts.id.renderButton(
+        ref.current,
+        { theme: 'outline', size: 'large' } // Customize button style if needed
+      );
+      setLoaded(true);
+    }
+  }, [loaded, onSuccess, onError]);
+
+  return <div ref={ref} />;
+}
+
+const Card = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignSelf: 'center',
@@ -31,14 +60,14 @@ const Card = styled(MuiCard)(({ theme }) => ({
   gap: theme.spacing(2),
   margin: 'auto',
   [theme.breakpoints.up('sm')]: {
-    maxWidth: '450px',
+    maxWidth: '450px'
   },
   boxShadow:
     'hsla(220, 30%, 5%, 0.05) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.05) 0px 15px 35px -5px',
   ...theme.applyStyles('dark', {
     boxShadow:
-      'hsla(220, 30%, 5%, 0.5) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.08) 0px 15px 35px -5px',
-  }),
+      'hsla(220, 30%, 5%, 0.5) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.08) 0px 15px 35px -5px'
+  })
 }));
 
 const SignInContainer = styled(Stack)(({ theme }) => ({
@@ -46,7 +75,7 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
   minHeight: '100%',
   padding: theme.spacing(2),
   [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(4),
+    padding: theme.spacing(4)
   },
   '&::before': {
     content: '""',
@@ -59,66 +88,48 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
     backgroundRepeat: 'no-repeat',
     ...theme.applyStyles('dark', {
       backgroundImage:
-        'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
-    }),
-  },
+        'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))'
+    })
+  }
 }));
 
 export default function SignIn(props) {
-  const [emailError, setEmailError] = React.useState(false);
-  const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
-  const [open, setOpen] = React.useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const validateInputs = () => {
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
-
-    let isValid = true;
-
-    if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
+  // Traditional email/password login handler
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    let valid = true;
+    if (!emailInput.value || !/\S+@\S+\.\S+/.test(emailInput.value)) {
       setEmailError(true);
       setEmailErrorMessage('Please enter a valid email address.');
-      isValid = false;
+      valid = false;
     } else {
       setEmailError(false);
       setEmailErrorMessage('');
     }
-
-    if (!password.value || password.value.length < 6) {
+    if (!passwordInput.value || passwordInput.value.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage('Password must be at least 6 characters long.');
-      isValid = false;
+      valid = false;
     } else {
       setPasswordError(false);
       setPasswordErrorMessage('');
     }
-
-    return isValid;
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!validateInputs()) return;
-
+    if (!valid) return;
     try {
       const formData = new FormData(event.currentTarget);
       const userEmail = formData.get('email');
       const userPass = formData.get('password');
-
       const response = await login({ email: userEmail, password: userPass });
-      // Depending on your backend, response.token or response.idToken is stored
       localStorage.setItem('token', response.token || response.idToken);
       navigate('/dashboard');
     } catch (err) {
@@ -128,31 +139,45 @@ export default function SignIn(props) {
     }
   };
 
+  // Handler for opening/closing Forgot Password dialog
+  const handleForgotOpen = () => setForgotOpen(true);
+  const handleForgotClose = () => setForgotOpen(false);
+
+  // Custom Google sign-in handler: send the Google ID token to the backend
+  const handleGoogleSuccess = async (googleToken) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: googleToken })
+      });
+      const data = await response.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard');
+      } else {
+        console.error('Google sign-in failed', data);
+      }
+    } catch (error) {
+      console.error('Error during Google sign-in', error);
+    }
+  };
+
+  const handleGoogleError = (err) => {
+    console.error('Google sign-in error:', err);
+  };
+
   return (
     <AppTheme {...props}>
       <CssBaseline enableColorScheme />
       <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
-        <Card variant="outlined">
+        <Card>
           <SitemarkIcon />
-          <Typography
-            component="h1"
-            variant="h4"
-            sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}
-          >
+          <Typography component="h1" variant="h4" sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}>
             Sign in
           </Typography>
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            noValidate
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: '100%',
-              gap: 2,
-            }}
-          >
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <FormControl>
               <FormLabel htmlFor="email">Email</FormLabel>
               <TextField
@@ -175,10 +200,10 @@ export default function SignIn(props) {
               <TextField
                 error={passwordError}
                 helperText={passwordErrorMessage}
+                id="password"
+                type="password"
                 name="password"
                 placeholder="••••••"
-                type="password"
-                id="password"
                 autoComplete="current-password"
                 required
                 fullWidth
@@ -186,41 +211,22 @@ export default function SignIn(props) {
                 color={passwordError ? 'error' : 'primary'}
               />
             </FormControl>
-            <FormControlLabel
-              control={<Checkbox value="remember" color="primary" />}
-              label="Remember me"
-            />
-            <ForgotPasswordDialog open={open} handleClose={handleClose} />
+            <FormControlLabel control={<Checkbox value="remember" color="primary" />} label="Remember me" />
+            <ForgotPasswordDialog open={forgotOpen} handleClose={handleForgotClose} />
             <Button type="submit" fullWidth variant="contained">
               Sign in
             </Button>
-            <Link
-              component="button"
-              type="button"
-              onClick={handleClickOpen}
-              variant="body2"
-              sx={{ alignSelf: 'center' }}
-            >
-              Forgot your password?
-            </Link>
           </Box>
           <Divider>or</Divider>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => alert('Sign in with Google')}
-              startIcon={<GoogleIcon />}
-            >
-              Sign in with Google
-            </Button>
+          <Stack spacing={2}>
+            <GoogleSignInButton onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
             <Typography sx={{ textAlign: 'center' }}>
               Don&apos;t have an account?{' '}
-              <Link href="/sign-up" variant="body2" sx={{ alignSelf: 'center' }}>
+              <Link href="/sign-up" variant="body2">
                 Sign up
               </Link>
             </Typography>
-          </Box>
+          </Stack>
         </Card>
       </SignInContainer>
     </AppTheme>
