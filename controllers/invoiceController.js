@@ -1,5 +1,7 @@
 // controllers/invoiceController.js
-const { Invoice } = require('../routes'); // destructure from models/index.js
+const { Invoice } = require('../models'); // destructure from models/index.js
+const { getPreSignedUrl } = require('../utils/s3Uploader');
+
 
 // GET /api/invoices
 exports.getAllInvoices = async (req, res) => {
@@ -125,8 +127,24 @@ exports.sendInvoice = async (req, res) => {
   try {
     const userId = req.user.sub;
     const { id } = req.params;
-    // Lookup and handle sending an email, etc.
-    return res.json({ message: `Invoice ${id} sent to client.` });
+    // Look up invoice (including client and line items)
+    const invoice = await Invoice.findOne({ where: { id, userId } });
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    
+    // Generate PDF using a library like pdfkit or puppeteer
+    // For example, assume generateInvoicePdf(invoice) returns a Buffer
+    const pdfBuffer = await generateInvoicePdf(invoice);
+    
+    // Upload PDF to S3 (see Step 3)
+    const s3Url = await uploadToS3(pdfBuffer, `invoices/${invoice.id}.pdf`);
+    
+    // Optionally update invoice with the S3 URL and mark as SENT
+    invoice.status = 'SENT';
+    invoice.pdfUrl = s3Url; // if you add this field to your Invoice model
+    await invoice.save();
+
+    // Optionally, send email to the client with the PDF URL
+    return res.json({ message: `Invoice ${id} sent to client.`, pdfUrl: s3Url });
   } catch (error) {
     console.error('Error sending invoice:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -142,5 +160,25 @@ exports.report = async (req, res) => {
   } catch (error) {
     console.error('Error generating report:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.getInvoicePdf = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { id } = req.params;
+    
+    // Find the invoice; ensure the invoice belongs to this user
+    const invoice = await Invoice.findOne({ where: { id, userId } });
+    if (!invoice || !invoice.pdfUrl) {
+      return res.status(404).json({ error: 'Invoice or PDF not found' });
+    }
+    
+    // Assume invoice.pdfUrl stores the S3 key (e.g., "invoices/123.pdf")
+    const preSignedUrl = getPreSignedUrl(invoice.pdfUrl, 120); // valid for 2 minutes
+    return res.json({ url: preSignedUrl });
+  } catch (error) {
+    console.error("Error fetching invoice PDF:", error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -7,7 +7,8 @@ const authController = require('../controllers/authController');
 const invoiceController = require('../controllers/invoiceController');
 const paymentController = require('../controllers/paymentController');
 const bankController = require('../controllers/bankController');
-const subscriptionController = require('../controllers/subscriptionController');
+// Removed subscriptionController and added contractController:
+const contractController = require('../controllers/contractController');
 const userController = require('../controllers/userController');
 const notificationController = require('../controllers/notificationController');
 const settingsController = require('../controllers/settingsController');
@@ -18,6 +19,7 @@ const webhookController = require('../controllers/webhookController');
 const adminController = require('../controllers/adminController');
 const authCallbackController = require('../controllers/authCallbackController');
 const authGoogleController = require('../controllers/authGoogleController');
+
 // Auth Routes
 router.post('/auth/register', authController.register);
 router.post('/auth/confirm', authController.confirm);
@@ -28,7 +30,7 @@ router.post('/auth/confirm-forgot-password', authController.confirmForgotPasswor
 router.post('/auth/google', authGoogleController.googleSignIn);
 router.get('/auth/callback', authCallbackController.authCallback);
 
-// If you implement refresh, uncomment below; otherwise, comment it out:
+// If you implement refresh, uncomment below:
 // router.get('/auth/refresh', authController.refresh);
 
 // Invoice Routes (protected)
@@ -51,16 +53,18 @@ router.get('/bank-accounts', requireAuth, bankController.getBankAccounts);
 router.post('/bank-accounts', requireAuth, bankController.connectBankAccount);
 router.get('/bank-transactions', requireAuth, bankController.getBankTransactions);
 
-// Subscriptions (protected)
-router.get('/subscriptions', requireAuth, subscriptionController.getSubscriptions);
-router.post('/subscriptions', requireAuth, subscriptionController.createSubscription);
-router.put('/subscriptions/:id', requireAuth, subscriptionController.updateSubscription);
-router.delete('/subscriptions/:id', requireAuth, subscriptionController.deleteSubscription);
+// Contracts (protected)
+// New endpoints for contracts (instead of subscriptions)
+router.get('/contracts', requireAuth, contractController.getContracts);
+router.post('/contracts', requireAuth, contractController.createContract);
+router.put('/contracts/:id', requireAuth, contractController.updateContract);
+router.post('/contracts/:id/cancel', requireAuth, contractController.cancelContract);
+router.post('/contracts/:id/renew', requireAuth, contractController.renewContract);
+router.post('/contracts/:id/send-for-signature', requireAuth, contractController.sendForSignature);
 
 // User (protected)
 router.get('/users/me', requireAuth, userController.getMe);
 router.put('/users/me', requireAuth, userController.updateMe);
-
 
 // Notifications (protected)
 router.get('/notifications', requireAuth, notificationController.getNotifications);

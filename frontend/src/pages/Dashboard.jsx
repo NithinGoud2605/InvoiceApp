@@ -5,6 +5,7 @@ import DashboardLayout from '../components/Dashcomp/DashboardLayout';
 import DashboardHome from '../components/Dashcomp/DashboardHome';
 import InvoicesPage from '../components/Dashcomp/InvoicesPage';
 import ContractsPage from '../components/Dashcomp/ContractsPage';
+import SubscriptionGuard from '../components/SubscriptionGuard';
 
 export default function Dashboard() {
   return (
@@ -12,7 +13,14 @@ export default function Dashboard() {
       <Route path="/" element={<DashboardLayout />}>
         <Route index element={<DashboardHome />} />
         <Route path="invoices" element={<InvoicesPage />} />
-        <Route path="contracts" element={<ContractsPage />} />
+        <Route
+          path="contracts"
+          element={
+            <SubscriptionGuard>
+              <ContractsPage />
+            </SubscriptionGuard>
+          }
+        />
       </Route>
     </Routes>
   );

@@ -16,7 +16,7 @@ import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
-//import { GoogleIcon, FacebookIcon } from '../components/Mainpage/CustomIcons';
+import GoogleSignInButton from '../components/GoogleSignInButton'; // Imported Google signup button
 import { register, confirmAccount } from '../services/api';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -69,6 +69,30 @@ export default function SignUp(props) {
   const [registeredEmail, setRegisteredEmail] = React.useState('');
   const [confirmError, setConfirmError] = React.useState('');
   const navigate = useNavigate();
+
+  // Google signup handlers (same as sign in)
+  const handleGoogleSuccess = async (googleToken) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: googleToken }),
+      });
+      const data = await response.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard');
+      } else {
+        console.error('Google sign-in failed', data);
+      }
+    } catch (error) {
+      console.error('Error during Google sign-in', error);
+    }
+  };
+
+  const handleGoogleError = (err) => {
+    console.error('Google sign-in error:', err);
+  };
 
   const validateInputs = () => {
     const email = document.getElementById('email');
@@ -241,22 +265,10 @@ export default function SignUp(props) {
                 <Typography sx={{ color: 'text.secondary' }}>or</Typography>
               </Divider>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => alert('Sign up with Google')}
-                  startIcon={<GoogleIcon />}
-                >
-                  Sign up with Google
-                </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => alert('Sign up with Facebook')}
-                  startIcon={<FacebookIcon />}
-                >
-                  Sign up with Facebook
-                </Button>
+                <GoogleSignInButton 
+                  onSuccess={handleGoogleSuccess} 
+                  onError={handleGoogleError} 
+                />
                 <Typography sx={{ textAlign: 'center' }}>
                   Already have an account?{' '}
                   <Link href="/sign-in" variant="body2" sx={{ alignSelf: 'center' }}>

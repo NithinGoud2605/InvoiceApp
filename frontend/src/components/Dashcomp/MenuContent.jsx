@@ -1,50 +1,73 @@
-// src/components/Dashcomp/MenuContent.jsx
-import React from 'react';
+import React, { useContext, useState } from 'react';
 import { List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import { Link as RouterLink } from 'react-router-dom';
+import LockIcon from '@mui/icons-material/Lock';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { UserContext } from '../../contexts/UserContext';
+import SubscriptionAlertDialog from '../SubscriptionAlertDailog';
 
 export default function MenuContent() {
-  return (
-    <List dense sx={{ flexGrow: 1 }}>
-      {/* Example main items */}
-      <ListItem disablePadding>
-        <ListItemButton component={RouterLink} to="/dashboard">
-          <ListItemIcon>
-            <HomeRoundedIcon />
-          </ListItemIcon>
-          <ListItemText primary="Home" />
-        </ListItemButton>
-      </ListItem>
-      <ListItem disablePadding>
-        <ListItemButton component={RouterLink} to="/dashboard/invoices">
-          <ListItemIcon>
-            <ReceiptLongRoundedIcon />
-          </ListItemIcon>
-          <ListItemText primary="Invoices" />
-        </ListItemButton>
-      </ListItem>
-      <ListItem disablePadding>
-        <ListItemButton component={RouterLink} to="/dashboard/contracts">
-          <ListItemIcon>
-            <DescriptionRoundedIcon />
-          </ListItemIcon>
-          <ListItemText primary="Contracts" />
-        </ListItemButton>
-      </ListItem>
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-      {/* Just 'About' remains */}
-      <ListItem disablePadding>
-        <ListItemButton>
-          <ListItemIcon>
-            <InfoRoundedIcon />
-          </ListItemIcon>
-          <ListItemText primary="About" />
-        </ListItemButton>
-      </ListItem>
-    </List>
+  const isSubscribed = user && user.isSubscribed;
+
+  // For restricted routes, navigate if subscribed; otherwise, show the alert dialog.
+  const handleRestrictedClick = (path) => {
+    if (isSubscribed) {
+      navigate(path);
+    } else {
+      setDialogOpen(true);
+    }
+  };
+
+  return (
+    <>
+      <List dense sx={{ flexGrow: 1 }}>
+        {/* Home: Restricted */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleRestrictedClick('/dashboard')}>
+            <ListItemIcon>
+              <HomeRoundedIcon />
+              {!isSubscribed && <LockIcon fontSize="small" sx={{ ml: 0.5 }} />}
+            </ListItemIcon>
+            <ListItemText primary="Home" />
+          </ListItemButton>
+        </ListItem>
+        {/* Invoices: Accessible */}
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/dashboard/invoices">
+            <ListItemIcon>
+              <ReceiptLongRoundedIcon />
+            </ListItemIcon>
+            <ListItemText primary="Invoices" />
+          </ListItemButton>
+        </ListItem>
+        {/* Contracts: Restricted */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleRestrictedClick('/dashboard/contracts')}>
+            <ListItemIcon>
+              <DescriptionRoundedIcon />
+              {!isSubscribed && <LockIcon fontSize="small" sx={{ ml: 0.5 }} />}
+            </ListItemIcon>
+            <ListItemText primary="Contracts" />
+          </ListItemButton>
+        </ListItem>
+        {/* About: Accessible */}
+        <ListItem disablePadding>
+          <ListItemButton>
+            <ListItemIcon>
+              <InfoRoundedIcon />
+            </ListItemIcon>
+            <ListItemText primary="About" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+      <SubscriptionAlertDialog open={dialogOpen} handleClose={() => setDialogOpen(false)} />
+    </>
   );
 }

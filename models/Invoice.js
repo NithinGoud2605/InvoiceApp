@@ -1,4 +1,3 @@
-// models/Invoice.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -9,14 +8,13 @@ module.exports = (sequelize) => {
       allowNull: false,
       primaryKey: true
     },
-    // Foreign key to the local user table
     userId: {
       type: DataTypes.UUID,
       allowNull: false
     },
-    amount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+    clientId: {  // New: Reference to a client
+      type: DataTypes.UUID,
+      allowNull: true
     },
     status: {
       type: DataTypes.ENUM('DRAFT', 'SENT', 'PAID', 'CANCELLED'),
@@ -25,6 +23,14 @@ module.exports = (sequelize) => {
     dueDate: {
       type: DataTypes.DATEONLY,
       allowNull: false
+    },
+    totalAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
+    currency: {
+      type: DataTypes.STRING,
+      defaultValue: 'USD'
     }
   }, {
     tableName: 'invoices',

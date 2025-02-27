@@ -19,6 +19,7 @@ apiClient.interceptors.request.use(
       !config.url.includes('/auth/confirm')
     ) {
       const token = localStorage.getItem('token');
+      console.log('Token being attached:', token);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -27,6 +28,7 @@ apiClient.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
 
 /* ------------- AUTH ROUTES ------------- */
 export const register = async (userData) => {
