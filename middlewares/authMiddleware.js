@@ -1,5 +1,3 @@
-// middlewares/authMiddleware.js
-
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
 const logger = require('../utils/logger');
 
@@ -19,7 +17,7 @@ const requireAuth = async (req, res, next) => {
   try {
     const payload = await verifier.verify(token);
     req.user = {
-      id: payload.sub,
+      sub: payload.sub,       // Cognito user sub
       email: payload.email,
       cognitoGroups: payload['cognito:groups'] || []
     };

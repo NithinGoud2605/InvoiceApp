@@ -16,6 +16,7 @@ exports.getMe = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        isSubscribed: user.isSubscribed,  // <-- Add this line
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

@@ -7,7 +7,6 @@ const authController = require('../controllers/authController');
 const invoiceController = require('../controllers/invoiceController');
 const paymentController = require('../controllers/paymentController');
 const bankController = require('../controllers/bankController');
-// Removed subscriptionController and added contractController:
 const contractController = require('../controllers/contractController');
 const userController = require('../controllers/userController');
 const notificationController = require('../controllers/notificationController');
@@ -18,7 +17,6 @@ const uploadController = require('../controllers/uploadController');
 const webhookController = require('../controllers/webhookController');
 const adminController = require('../controllers/adminController');
 const authCallbackController = require('../controllers/authCallbackController');
-const authGoogleController = require('../controllers/authGoogleController');
 
 // Auth Routes
 router.post('/auth/register', authController.register);
@@ -27,13 +25,11 @@ router.post('/auth/login', authController.login);
 router.post('/auth/logout', authController.logout);
 router.post('/auth/forgot-password', authController.forgotPassword);
 router.post('/auth/confirm-forgot-password', authController.confirmForgotPassword);
-router.post('/auth/google', authGoogleController.googleSignIn);
-router.get('/auth/callback', authCallbackController.authCallback);
 
-// If you implement refresh, uncomment below:
+// Optional: If you implement refresh:
 // router.get('/auth/refresh', authController.refresh);
 
-// Invoice Routes (protected)
+// Protected Invoice Routes
 router.get('/invoices', requireAuth, invoiceController.getAllInvoices);
 router.post('/invoices', requireAuth, invoiceController.createInvoice);
 router.get('/invoices/overview', requireAuth, invoiceController.getOverview);
@@ -43,18 +39,17 @@ router.get('/invoices/:id', requireAuth, invoiceController.getInvoiceById);
 router.put('/invoices/:id', requireAuth, invoiceController.updateInvoice);
 router.delete('/invoices/:id', requireAuth, invoiceController.deleteInvoice);
 
-// Payments (protected)
+// Protected Payment Routes
 router.post('/invoices/:id/pay', requireAuth, paymentController.payInvoice);
 router.get('/payments', requireAuth, paymentController.getPayments);
 router.get('/payments/:id', requireAuth, paymentController.getPaymentById);
 
-// Bank Integrations (protected)
+// Protected Bank Integration Routes
 router.get('/bank-accounts', requireAuth, bankController.getBankAccounts);
 router.post('/bank-accounts', requireAuth, bankController.connectBankAccount);
 router.get('/bank-transactions', requireAuth, bankController.getBankTransactions);
 
-// Contracts (protected)
-// New endpoints for contracts (instead of subscriptions)
+// Protected Contract Routes
 router.get('/contracts', requireAuth, contractController.getContracts);
 router.post('/contracts', requireAuth, contractController.createContract);
 router.put('/contracts/:id', requireAuth, contractController.updateContract);
@@ -62,31 +57,31 @@ router.post('/contracts/:id/cancel', requireAuth, contractController.cancelContr
 router.post('/contracts/:id/renew', requireAuth, contractController.renewContract);
 router.post('/contracts/:id/send-for-signature', requireAuth, contractController.sendForSignature);
 
-// User (protected)
+// Protected User Routes
 router.get('/users/me', requireAuth, userController.getMe);
 router.put('/users/me', requireAuth, userController.updateMe);
 
-// Notifications (protected)
+// Protected Notification Routes
 router.get('/notifications', requireAuth, notificationController.getNotifications);
 router.post('/notifications/read', requireAuth, notificationController.markNotificationsRead);
 
-// Settings (protected)
+// Protected Settings Routes
 router.get('/settings', requireAuth, settingsController.getSettings);
 router.put('/settings', requireAuth, settingsController.updateSettings);
 
-// Reports (protected)
+// Protected Report Routes
 router.get('/reports', requireAuth, reportController.getReports);
 
-// Audit Logs (protected)
+// Protected Audit Log Routes
 router.get('/audit-logs', requireAuth, auditLogController.getAuditLogs);
 
-// File Upload (protected)
+// Protected File Upload Route
 router.post('/uploads', requireAuth, uploadController.uploadFile);
 
-// Webhooks (public or protected depending on your design)
+// Public Webhook Route (or protect it based on your design)
 router.post('/webhooks', webhookController.handleWebhook);
 
-// Admin (protected + admin check)
+// Protected Admin Routes
 router.get('/admin/users', requireAuth, adminController.getAllUsers);
 router.put('/admin/users/:id', requireAuth, adminController.updateUser);
 

@@ -1,19 +1,10 @@
 const AWS = require('aws-sdk');
 const crypto = require('crypto');
 const { User } = require('../models'); // Local DB model, if needed
+const computeSecretHash = require('../utils/computeSecretHash');
 
 // Update AWS region from environment variable or default
 AWS.config.update({ region: process.env.AWS_REGION || 'us-east-1' });
-
-// Helper function to compute the SecretHash
-function computeSecretHash(username) {
-  const clientSecret = process.env.COGNITO_CLIENT_SECRET;
-  const clientId = process.env.COGNITO_CLIENT_ID;
-  return crypto
-    .createHmac('SHA256', clientSecret)
-    .update(username + clientId)
-    .digest('base64');
-}
 
 exports.register = async (req, res, next) => {
   try {
@@ -23,7 +14,6 @@ exports.register = async (req, res, next) => {
     }
     
     const cognito = new AWS.CognitoIdentityServiceProvider();
-    
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -39,8 +29,6 @@ exports.register = async (req, res, next) => {
       if (err) {
         return res.status(400).json({ message: err.message || 'Sign up failed' });
       }
-      
-      // Create a record in your local database including the name
       await User.create({
         email,
         name,
@@ -61,7 +49,6 @@ exports.confirm = async (req, res, next) => {
   try {
     const { email, code } = req.body;
     const cognito = new AWS.CognitoIdentityServiceProvider();
-    
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -73,10 +60,7 @@ exports.confirm = async (req, res, next) => {
       if (err) {
         return res.status(400).json({ message: err.message || 'Confirmation failed' });
       }
-      return res.json({
-        message: 'User confirmed successfully',
-        data
-      });
+      return res.json({ message: 'User confirmed successfully', data });
     });
   } catch (err) {
     next(err);
@@ -87,7 +71,6 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const cognito = new AWS.CognitoIdentityServiceProvider();
-    
     const params = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: process.env.COGNITO_CLIENT_ID,
@@ -103,6 +86,7 @@ exports.login = async (req, res, next) => {
         return res.status(401).json({ message: err.message || 'Login failed' });
       }
       
+      // Return the Cognito tokens directly.
       const { AuthenticationResult } = data;
       return res.json({
         message: 'Login successful',

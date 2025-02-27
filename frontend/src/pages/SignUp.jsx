@@ -1,25 +1,15 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
-import CssBaseline from '@mui/material/CssBaseline';
-import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormLabel from '@mui/material/FormLabel';
-import FormControl from '@mui/material/FormControl';
-import Link from '@mui/material/Link';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
-import MuiCard from '@mui/material/Card';
-import { styled } from '@mui/material/styles';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Checkbox, CssBaseline, Divider, FormControl, FormControlLabel,
+  FormLabel, Link, Stack, TextField, Typography
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
-import GoogleSignInButton from '../components/GoogleSignInButton'; // Imported Google signup button
 import { register, confirmAccount } from '../services/api';
 
-const Card = styled(MuiCard)(({ theme }) => ({
+const Card = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignSelf: 'center',
@@ -58,47 +48,22 @@ const SignUpContainer = styled(Stack)(({ theme }) => ({
 }));
 
 export default function SignUp(props) {
-  const [emailError, setEmailError] = React.useState(false);
-  const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
-  const [nameError, setNameError] = React.useState(false);
-  const [nameErrorMessage, setNameErrorMessage] = React.useState('');
-  const [isVerificationStep, setIsVerificationStep] = React.useState(false);
-  const [verificationCode, setVerificationCode] = React.useState('');
-  const [registeredEmail, setRegisteredEmail] = React.useState('');
-  const [confirmError, setConfirmError] = React.useState('');
+  const [emailError, setEmailError] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+  const [nameError, setNameError] = useState(false);
+  const [nameErrorMessage, setNameErrorMessage] = useState('');
+  const [isVerificationStep, setIsVerificationStep] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [confirmError, setConfirmError] = useState('');
   const navigate = useNavigate();
-
-  // Google signup handlers (same as sign in)
-  const handleGoogleSuccess = async (googleToken) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: googleToken }),
-      });
-      const data = await response.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        navigate('/dashboard');
-      } else {
-        console.error('Google sign-in failed', data);
-      }
-    } catch (error) {
-      console.error('Error during Google sign-in', error);
-    }
-  };
-
-  const handleGoogleError = (err) => {
-    console.error('Google sign-in error:', err);
-  };
 
   const validateInputs = () => {
     const email = document.getElementById('email');
     const password = document.getElementById('password');
     const name = document.getElementById('name');
-
     let isValid = true;
     if (!name.value || name.value.length < 1) {
       setNameError(true);
@@ -108,7 +73,6 @@ export default function SignUp(props) {
       setNameError(false);
       setNameErrorMessage('');
     }
-
     if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
       setEmailError(true);
       setEmailErrorMessage('Please enter a valid email address.');
@@ -117,7 +81,6 @@ export default function SignUp(props) {
       setEmailError(false);
       setEmailErrorMessage('');
     }
-
     if (!password.value || password.value.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage('Password must be at least 6 characters long.');
@@ -166,19 +129,11 @@ export default function SignUp(props) {
       <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
       <SignUpContainer direction="column" justifyContent="space-between">
         <Card variant="outlined">
-          <Typography
-            component="h1"
-            variant="h4"
-            sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}
-          >
+          <Typography component="h1" variant="h4" sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}>
             {isVerificationStep ? 'Confirm Registration' : 'Sign up'}
           </Typography>
           {isVerificationStep ? (
-            <Box
-              component="form"
-              onSubmit={handleConfirmSubmit}
-              sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-            >
+            <Box component="form" onSubmit={handleConfirmSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="body1">
                 A verification code has been sent to {registeredEmail}. Please enter it below.
               </Typography>
@@ -200,11 +155,7 @@ export default function SignUp(props) {
               </Button>
             </Box>
           ) : (
-            <Box
-              component="form"
-              onSubmit={handleRegisterSubmit}
-              sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-            >
+            <Box component="form" onSubmit={handleRegisterSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <FormControl>
                 <FormLabel htmlFor="name">Full name</FormLabel>
                 <TextField
@@ -265,10 +216,6 @@ export default function SignUp(props) {
                 <Typography sx={{ color: 'text.secondary' }}>or</Typography>
               </Divider>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <GoogleSignInButton 
-                  onSuccess={handleGoogleSuccess} 
-                  onError={handleGoogleError} 
-                />
                 <Typography sx={{ textAlign: 'center' }}>
                   Already have an account?{' '}
                   <Link href="/sign-in" variant="body2" sx={{ alignSelf: 'center' }}>

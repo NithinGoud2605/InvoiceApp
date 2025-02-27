@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, Checkbox, CssBaseline, Divider, FormControl, FormControlLabel,
@@ -7,10 +7,9 @@ import {
 import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
-//import { GoogleIcon } from '../components/Mainpage/CustomIcons';
 import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 import { login } from '../services/api';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+import { UserContext } from '../contexts/UserContext';
 
 const Card = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -56,6 +55,7 @@ export default function SignIn(props) {
   const [passwordError, setPasswordError] = useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
+  const { refreshUser } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -85,7 +85,9 @@ export default function SignIn(props) {
       const userEmail = formData.get('email');
       const userPass = formData.get('password');
       const response = await login({ email: userEmail, password: userPass });
-      localStorage.setItem('token', response.token || response.idToken);
+      localStorage.setItem('token', response.idToken);
+      // Immediately refresh the user context
+      await refreshUser();
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err.response ? err.response.data : err.message);
@@ -96,29 +98,6 @@ export default function SignIn(props) {
 
   const handleForgotOpen = () => setForgotOpen(true);
   const handleForgotClose = () => setForgotOpen(false);
-
-  const handleGoogleSuccess = async (googleToken) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: googleToken }),
-      });
-      const data = await response.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        navigate('/dashboard');
-      } else {
-        console.error('Google sign-in failed', data);
-      }
-    } catch (error) {
-      console.error('Error during Google sign-in', error);
-    }
-  };
-
-  const handleGoogleError = (err) => {
-    console.error('Google sign-in error:', err);
-  };
 
   return (
     <AppTheme {...props}>
@@ -171,7 +150,6 @@ export default function SignIn(props) {
           </Box>
           <Divider>or</Divider>
           <Stack spacing={2}>
-            <GoogleSignInButton onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
             <Typography sx={{ textAlign: 'center' }}>
               Don't have an account?{' '}
               <Link href="/sign-up" variant="body2">

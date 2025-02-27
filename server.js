@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -6,12 +5,11 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const sequelize = require('./config/sequelize');
-const apiRoutes = require('./routes/index'); // your routes
+const apiRoutes = require('./routes/index');
 const validateEnvironment = require('./utils/envValidator');
 const errorHandler = require('./middlewares/errorHandler');
 const { requireAuth } = require('./middlewares/authMiddleware');
 
-// Validate environment after loading .env
 validateEnvironment();
 
 const app = express();
@@ -57,10 +55,11 @@ app.use('/api', apiLimiter, apiRoutes);
 // Use error handler
 app.use(errorHandler);
 
-// Start server
+// Start server with force sync for this run
 async function startServer() {
   try {
     await sequelize.authenticate();
+    // Force sync: drops and recreates all tables (use only in development/testing)
     await sequelize.sync({ alter: true });
     
     app.listen(port, () => {
