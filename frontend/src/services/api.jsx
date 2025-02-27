@@ -1,7 +1,7 @@
-// src/services/api.js
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -9,215 +9,105 @@ const apiClient = axios.create({
   },
 });
 
+// 🚀 Interceptor to Add Authorization Header Automatically
 apiClient.interceptors.request.use(
   (config) => {
-    if (
-      !config.url.includes('/auth/login') &&
-      !config.url.includes('/auth/register') &&
-      !config.url.includes('/auth/forgot-password') &&
-      !config.url.includes('/auth/confirm-forgot-password') &&
-      !config.url.includes('/auth/confirm')
-    ) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const token = localStorage.getItem('token');
+    if (token && !config.url.includes('/auth')) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
+// ❌ Global Error Handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('❌ API Error:', error.response?.data || error.message);
+
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Unauthorized! Redirecting to login...');
+      localStorage.removeItem('token');
+      window.location.href = '/sign-in';
+    }
+
+    return Promise.reject(error.response?.data || error);
+  }
+);
+
+// 🔄 Helper Function for Requests
+const apiRequest = async (method, url, data = null, config = {}) => {
+  try {
+    const response = await apiClient[method](url, data, config);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
 /* ------------- AUTH ROUTES ------------- */
-export const register = async (userData) => {
-  const response = await apiClient.post('/auth/register', userData);
-  return response.data;
-};
-
-export const confirmAccount = async (confirmationData) => {
-  const response = await apiClient.post('/auth/confirm', confirmationData);
-  return response.data;
-};
-
-export const login = async (credentials) => {
-  const response = await apiClient.post('/auth/login', credentials);
-  return response.data;
-};
-
-export const logout = async () => {
-  const response = await apiClient.post('/auth/logout');
-  return response.data;
-};
-
-export const forgotPassword = async (email) => {
-  const response = await apiClient.post('/auth/forgot-password', { email });
-  return response.data;
-};
-
-export const confirmForgotPassword = async (email, code, newPassword) => {
-  const response = await apiClient.post('/auth/confirm-forgot-password', { email, code, newPassword });
-  return response.data;
-};
+export const register = (userData) => apiRequest('post', '/auth/register', userData);
+export const confirmAccount = (confirmationData) => apiRequest('post', '/auth/confirm', confirmationData);
+export const login = (credentials) => apiRequest('post', '/auth/login', credentials);
+export const logout = () => apiRequest('post', '/auth/logout');
+export const forgotPassword = (email) => apiRequest('post', '/auth/forgot-password', { email });
+export const confirmForgotPassword = (email, code, newPassword) => apiRequest('post', '/auth/confirm-forgot-password', { email, code, newPassword });
 
 /* ------------- INVOICE ROUTES ------------- */
-export const getAllInvoices = async () => {
-  const response = await apiClient.get('/invoices');
-  return response.data;
-};
+export const getAllInvoices = () => apiRequest('get', '/invoices');
+export const createInvoice = (invoiceData) => apiRequest('post', '/invoices', invoiceData);
+export const getInvoiceOverview = () => apiRequest('get', '/invoices/overview');
+export const getInvoiceReport = () => apiRequest('get', '/invoices/report');
+export const sendInvoice = (invoiceId, payload = {}) => apiRequest('post', `/invoices/${invoiceId}/send`, payload);
+export const getInvoiceById = (invoiceId) => apiRequest('get', `/invoices/${invoiceId}`);
+export const updateInvoice = (invoiceId, invoiceData) => apiRequest('put', `/invoices/${invoiceId}`, invoiceData);
+export const deleteInvoice = (invoiceId) => apiRequest('delete', `/invoices/${invoiceId}`);
 
-export const createInvoice = async (invoiceData) => {
-  const response = await apiClient.post('/invoices', invoiceData);
-  return response.data;
-};
-
-export const getInvoiceOverview = async () => {
-  const response = await apiClient.get('/invoices/overview');
-  return response.data;
-};
-
-export const getInvoiceReport = async () => {
-  const response = await apiClient.get('/invoices/report');
-  return response.data;
-};
-
-export const sendInvoice = async (invoiceId, payload = {}) => {
-  const response = await apiClient.post(`/invoices/${invoiceId}/send`, payload);
-  return response.data;
-};
-
-export const getInvoiceById = async (invoiceId) => {
-  const response = await apiClient.get(`/invoices/${invoiceId}`);
-  return response.data;
-};
-
-export const updateInvoice = async (invoiceId, invoiceData) => {
-  const response = await apiClient.put(`/invoices/${invoiceId}`, invoiceData);
-  return response.data;
-};
-
-export const deleteInvoice = async (invoiceId) => {
-  const response = await apiClient.delete(`/invoices/${invoiceId}`);
-  return response.data;
+/* ------------- INVOICE PDF ROUTE ------------- */
+export const getInvoicePdf = async (invoiceId) => {
+  try {
+    const response = await apiClient.get(`/invoices/${invoiceId}/pdf`);
+    console.log("✅ Pre-Signed URL Received:", response.data.url);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching PDF:", error);
+    throw error;
+  }
 };
 
 /* ------------- PAYMENT ROUTES ------------- */
-export const payInvoice = async (invoiceId, paymentData = {}) => {
-  const response = await apiClient.post(`/invoices/${invoiceId}/pay`, paymentData);
-  return response.data;
-};
-
-export const getPayments = async () => {
-  const response = await apiClient.get('/payments');
-  return response.data;
-};
-
-export const getPaymentById = async (paymentId) => {
-  const response = await apiClient.get(`/payments/${paymentId}`);
-  return response.data;
-};
+export const payInvoice = (invoiceId, paymentData = {}) => apiRequest('post', `/invoices/${invoiceId}/pay`, paymentData);
+export const getPayments = () => apiRequest('get', '/payments');
+export const getPaymentById = (paymentId) => apiRequest('get', `/payments/${paymentId}`);
 
 /* ------------- BANK INTEGRATIONS ------------- */
-export const getBankAccounts = async () => {
-  const response = await apiClient.get('/bank-accounts');
-  return response.data;
-};
-
-export const connectBankAccount = async (bankData) => {
-  const response = await apiClient.post('/bank-accounts', bankData);
-  return response.data;
-};
-
-export const getBankTransactions = async () => {
-  const response = await apiClient.get('/bank-transactions');
-  return response.data;
-};
-
-/* ------------- SUBSCRIPTIONS ------------- */
-export const getSubscriptions = async () => {
-  const response = await apiClient.get('/subscriptions');
-  return response.data;
-};
-
-export const createSubscription = async (subData) => {
-  const response = await apiClient.post('/subscriptions', subData);
-  return response.data;
-};
-
-export const updateSubscription = async (subId, subData) => {
-  const response = await apiClient.put(`/subscriptions/${subId}`, subData);
-  return response.data;
-};
-
-export const deleteSubscription = async (subId) => {
-  const response = await apiClient.delete(`/subscriptions/${subId}`);
-  return response.data;
-};
+export const getBankAccounts = () => apiRequest('get', '/bank-accounts');
+export const connectBankAccount = (bankData) => apiRequest('post', '/bank-accounts', bankData);
+export const getBankTransactions = () => apiRequest('get', '/bank-transactions');
 
 /* ------------- USER ROUTES ------------- */
-export const getMe = async () => {
-  const response = await apiClient.get('/users/me');
-  return response.data;
-};
-
-export const updateMe = async (userData) => {
-  const response = await apiClient.put('/users/me', userData);
-  return response.data;
-};
-
-/* ------------- NOTIFICATIONS ------------- */
-export const getNotifications = async () => {
-  const response = await apiClient.get('/notifications');
-  return response.data;
-};
-
-export const markNotificationsRead = async (readData = {}) => {
-  const response = await apiClient.post('/notifications/read', readData);
-  return response.data;
-};
-
-/* ------------- SETTINGS ------------- */
-export const getSettings = async () => {
-  const response = await apiClient.get('/settings');
-  return response.data;
-};
-
-export const updateSettings = async (settingsData) => {
-  const response = await apiClient.put('/settings', settingsData);
-  return response.data;
-};
-
-/* ------------- REPORTS ------------- */
-export const getReports = async () => {
-  const response = await apiClient.get('/reports');
-  return response.data;
-};
-
-/* ------------- AUDIT LOGS ------------- */
-export const getAuditLogs = async () => {
-  const response = await apiClient.get('/audit-logs');
-  return response.data;
-};
+export const getMe = () => apiRequest('get', '/users/me');
+export const updateMe = (userData) => apiRequest('put', '/users/me', userData);
 
 /* ------------- FILE UPLOAD ------------- */
 export const uploadFile = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await apiClient.post('/uploads', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+  return apiRequest('post', '/uploads', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return response.data;
 };
+
+/* ------------- NOTIFICATIONS ------------- */
+export const getNotifications = () => apiRequest('get', '/notifications');
+export const markNotificationsRead = (readData = {}) => apiRequest('post', '/notifications/read', readData);
+
+/* ------------- SETTINGS ------------- */
+export const getSettings = () => apiRequest('get', '/settings');
+export const updateSettings = (settingsData) => apiRequest('put', '/settings', settingsData);
 
 /* ------------- ADMIN ROUTES ------------- */
-export const getAllUsers = async () => {
-  const response = await apiClient.get('/admin/users');
-  return response.data;
-};
-
-export const updateUser = async (userId, userData) => {
-  const response = await apiClient.put(`/admin/users/${userId}`, userData);
-  return response.data;
-};
+export const getAllUsers = () => apiRequest('get', '/admin/users');
+export const updateUser = (userId, userData) => apiRequest('put', `/admin/users/${userId}`, userData);

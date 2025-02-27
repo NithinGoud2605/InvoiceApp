@@ -1,9 +1,9 @@
-const { User } = require('../models'); // Adjust the import as needed
+const { User } = require('../models');
 
 exports.getMe = async (req, res) => {
   try {
-    // Assuming req.user.sub is your cognitoSub from authentication middleware
-    const user = await User.findOne({ where: { cognitoSub: req.user.sub } });
+    // Use req.user.cognitoSub instead of req.user.sub
+    const user = await User.findOne({ where: { cognitoSub: req.user.cognitoSub } });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -54,6 +54,7 @@ exports.updateMe = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        isSubscribed: user.isSubscribed,
         updatedAt: user.updatedAt
       }
     });

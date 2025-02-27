@@ -1,4 +1,3 @@
-// src/components/Dashcomp/InvoicesPage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -10,73 +9,91 @@ import {
   TableCell,
   TableRow,
   TableHead,
-  Grid,
   Button,
   Stack,
+  Grid, // Standard Grid from MUI
 } from '@mui/material';
-import InvoiceVsExpenseChart from './InvoiceVsExpenseChart'; // Make sure you have this
-
-// Optional inline Range Selector
-function RangeSelector({ value, onChange }) {
-  return (
-    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-      <Button
-        variant={value === '7d' ? 'contained' : 'outlined'}
-        onClick={() => onChange('7d')}
-      >
-        7D
-      </Button>
-      <Button
-        variant={value === '30d' ? 'contained' : 'outlined'}
-        onClick={() => onChange('30d')}
-      >
-        30D
-      </Button>
-      <Button
-        variant={value === '90d' ? 'contained' : 'outlined'}
-        onClick={() => onChange('90d')}
-      >
-        90D
-      </Button>
-    </Stack>
-  );
-}
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Worker, Viewer } from '@react-pdf-viewer/core';
+import '@react-pdf-viewer/core/lib/styles/index.css';
 
 export default function InvoicesPage() {
-  const [range, setRange] = useState('7d');
-
-  // Dummy invoice list
-  const [invoices, setInvoices] = useState([
-    { id: 101, status: 'Paid', amount: 500, date: '2023-09-01' },
-    { id: 102, status: 'Pending', amount: 1200, date: '2023-09-03' },
-    { id: 103, status: 'Overdue', amount: 900, date: '2023-09-05' },
-  ]);
-
-  // For the chart comparing invoice vs expense
-  const [labels, setLabels] = useState([]);
-  const [invoiceSeries, setInvoiceSeries] = useState([]);
-  const [expenseSeries, setExpenseSeries] = useState([]);
+  const [invoices, setInvoices] = useState([]); // Ensure initialization
+  const [selectedPdf, setSelectedPdf] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Generate dummy data each time `range` changes
-    if (range === '7d') {
-      const days = ['Day1', 'Day2', 'Day3', 'Day4', 'Day5', 'Day6', 'Day7'];
-      setLabels(days);
-      setInvoiceSeries(days.map(() => Math.floor(Math.random() * 1000)));
-      setExpenseSeries(days.map(() => Math.floor(Math.random() * 800)));
-    } else if (range === '30d') {
-      const allDays = Array.from({ length: 30 }, (_, i) => `Day${i + 1}`);
-      setLabels(allDays);
-      setInvoiceSeries(allDays.map(() => Math.floor(Math.random() * 2000)));
-      setExpenseSeries(allDays.map(() => Math.floor(Math.random() * 1500)));
-    } else {
-      // 90d
-      const allDays = Array.from({ length: 90 }, (_, i) => `Day${i + 1}`);
-      setLabels(allDays);
-      setInvoiceSeries(allDays.map(() => Math.floor(Math.random() * 3000)));
-      setExpenseSeries(allDays.map(() => Math.floor(Math.random() * 2500)));
+    async function fetchInvoices() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('You must be logged in to view invoices.');
+          return;
+        }
+  
+        const { data } = await axios.get('http://localhost:3000/api/invoices', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        console.log("✅ Invoices Data:", data.invoices); // Debugging logs
+        setInvoices(data.invoices || []);
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+        setInvoices([]);
+      }
     }
-  }, [range]);
+    fetchInvoices();
+  }, []);
+  
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+  
+    const formData = new FormData();
+    formData.append('file', file);
+  
+    try {
+      const token = localStorage.getItem('token'); // Get token from local storage
+      if (!token) {
+        alert('You must be logged in to upload an invoice.');
+        return;
+      }
+  
+      const { data } = await axios.post('http://localhost:3000/api/uploads', formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`, // Send token with request
+        },
+      });
+  
+      alert('Invoice uploaded successfully!');
+      console.log('Invoice ID:', data.invoiceId);
+    } catch (error) {
+      console.error('Upload failed:', error.response?.data || error);
+      alert('Upload failed. Please try again.');
+    }
+  };
+  
+  
+  
+
+  const handlePreview = async (invoiceId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:3000/api/invoices/${invoiceId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      console.log("✅ Pre-Signed URL:", data.url);
+      setSelectedPdf(data.url);
+    } catch (error) {
+      console.error('Error fetching invoice PDF:', error);
+      alert('Failed to load invoice preview.');
+    }
+  };
+  
 
   return (
     <Box>
@@ -84,46 +101,67 @@ export default function InvoicesPage() {
         Invoices
       </Typography>
 
-      {/* Range Selector Buttons */}
-      <RangeSelector value={range} onChange={setRange} />
+      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+        <Button variant="contained" onClick={() => navigate('/dashboard/create-invoice')}>
+          Create Invoice
+        </Button>
+        <Button variant="contained" component="label">
+          Import Invoice
+          <input type="file" hidden onChange={handleFileUpload} />
+        </Button>
+      </Stack>
 
       <Grid container spacing={2}>
-        <Grid item xs={12} md={8}>
-          {/* Chart comparing invoice totals to expense totals */}
-          <InvoiceVsExpenseChart
-            labels={labels}
-            invoiceSeries={invoiceSeries}
-            expenseSeries={expenseSeries}
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Typography variant="subtitle1" gutterBottom>
-            Invoice List
-          </Typography>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ID</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Date</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {invoices.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell>{inv.id}</TableCell>
-                      <TableCell>{inv.status}</TableCell>
-                      <TableCell>{inv.amount}</TableCell>
-                      <TableCell>{inv.date}</TableCell>
+              <Typography variant="subtitle1" gutterBottom>
+                Invoice List
+              </Typography>
+              {invoices.length === 0 ? (
+                <Typography>No invoices found</Typography>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>PDF</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell>{invoice.id}</TableCell>
+                        <TableCell>{invoice.status}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outlined"
+                            onClick={() => handlePreview(invoice.id)}
+                          >
+                            Preview
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          {selectedPdf && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1">Preview</Typography>
+                <Worker workerUrl={`https://unpkg.com/pdfjs-dist@2.9.359/build/pdf.worker.min.js`}>
+                  <Viewer fileUrl={selectedPdf} />
+                </Worker>
+              </CardContent>
+            </Card>
+          )}
         </Grid>
       </Grid>
     </Box>

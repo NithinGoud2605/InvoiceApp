@@ -18,6 +18,9 @@ const webhookController = require('../controllers/webhookController');
 const adminController = require('../controllers/adminController');
 const authCallbackController = require('../controllers/authCallbackController');
 
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 // Auth Routes
 router.post('/auth/register', authController.register);
 router.post('/auth/confirm', authController.confirm);
@@ -76,7 +79,7 @@ router.get('/reports', requireAuth, reportController.getReports);
 router.get('/audit-logs', requireAuth, auditLogController.getAuditLogs);
 
 // Protected File Upload Route
-router.post('/uploads', requireAuth, uploadController.uploadFile);
+router.post('/uploads', requireAuth, upload.single('file'), uploadController.uploadInvoice);
 
 // Public Webhook Route (or protect it based on your design)
 router.post('/webhooks', webhookController.handleWebhook);

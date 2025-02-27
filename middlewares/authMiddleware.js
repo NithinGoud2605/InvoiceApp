@@ -1,4 +1,5 @@
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const { User } = require('../models'); // Ensure User model is included
 const logger = require('../utils/logger');
 
 const verifier = CognitoJwtVerifier.create({
@@ -8,19 +9,35 @@ const verifier = CognitoJwtVerifier.create({
 });
 
 const requireAuth = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
   try {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const payload = await verifier.verify(token);
+    console.log('✅ Decoded Cognito Token:', payload);
+
+    let user = await User.findOne({ where: { cognitoSub: payload.sub } });
+
+    // Create user if not found
+    if (!user) {
+      console.log('ℹ️ Creating new user in database');
+      user = await User.create({
+        cognitoSub: payload.sub,
+        email: payload.email,
+        name: payload.name || 'Unknown',
+      });
+    }
+
     req.user = {
-      sub: payload.sub,       // Cognito user sub
-      email: payload.email,
-      cognitoGroups: payload['cognito:groups'] || []
+      id: user.id,
+      cognitoSub: user.cognitoSub,
+      email: user.email,
     };
+
+    console.log('✅ Authenticated User ID:', req.user.id);
     next();
   } catch (err) {
     logger.error('JWT verification failed:', err);
@@ -28,11 +45,5 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-const requireRole = (role) => (req, res, next) => {
-  if (!req.user?.cognitoGroups?.includes(role)) {
-    return res.status(403).json({ message: 'Insufficient permissions' });
-  }
-  next();
-};
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth };

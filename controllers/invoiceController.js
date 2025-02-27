@@ -3,18 +3,27 @@ const { Invoice } = require('../models'); // destructure from models/index.js
 const { getPreSignedUrl } = require('../utils/s3Uploader');
 
 
-// GET /api/invoices
+// GET /api/invoices - Fetch all invoices with pre-signed URLs
 exports.getAllInvoices = async (req, res) => {
   try {
-    // user sub from Cognito. Check how you attach it in your auth middleware
-    const userId = req.user.sub;
+    if (!req.user || !req.user.id) {
+      console.error('❌ Error: Missing userId in request.');
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const userId = req.user.id;
+    console.log(`✅ Fetching invoices for user: ${userId}`);
+
     const invoices = await Invoice.findAll({ where: { userId } });
+
     return res.json({ invoices });
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
 
 // POST /api/invoices
 exports.createInvoice = async (req, res) => {
@@ -165,17 +174,48 @@ exports.report = async (req, res) => {
 
 exports.getInvoicePdf = async (req, res) => {
   try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    console.log(`🔍 Fetching invoice PDF for ID: ${id}, User: ${userId}`);
+
+    const invoice = await Invoice.findOne({ where: { id, userId } });
+
+    if (!invoice) {
+      console.error('❌ Error: Invoice not found.');
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    if (!invoice.pdfUrl) {
+      console.error('❌ Error: PDF URL is missing.');
+      return res.status(404).json({ error: 'PDF file not found' });
+    }
+
+    const preSignedUrl = getPreSignedUrl(invoice.pdfUrl, 300);
+    console.log(`✅ Pre-Signed URL Generated: ${preSignedUrl}`);
+
+    return res.json({ url: preSignedUrl });
+  } catch (error) {
+    console.error("❌ Error fetching invoice PDF:", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+exports.getInvoicePdf = async (req, res) => {
+  try {
     const userId = req.user.sub;
     const { id } = req.params;
-    
-    // Find the invoice; ensure the invoice belongs to this user
+
+    // Find invoice, ensure it belongs to the user
     const invoice = await Invoice.findOne({ where: { id, userId } });
     if (!invoice || !invoice.pdfUrl) {
       return res.status(404).json({ error: 'Invoice or PDF not found' });
     }
+
+    // Generate a temporary pre-signed URL (valid for 2 mins)
+    const preSignedUrl = getPreSignedUrl(invoice.pdfUrl, 120);
     
-    // Assume invoice.pdfUrl stores the S3 key (e.g., "invoices/123.pdf")
-    const preSignedUrl = getPreSignedUrl(invoice.pdfUrl, 120); // valid for 2 minutes
     return res.json({ url: preSignedUrl });
   } catch (error) {
     console.error("Error fetching invoice PDF:", error);

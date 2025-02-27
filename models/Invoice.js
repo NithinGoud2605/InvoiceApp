@@ -12,7 +12,7 @@ module.exports = (sequelize) => {
       type: DataTypes.UUID,
       allowNull: false
     },
-    clientId: {  // New: Reference to a client
+    clientId: {  // Reference to a client
       type: DataTypes.UUID,
       allowNull: true
     },
@@ -31,6 +31,10 @@ module.exports = (sequelize) => {
     currency: {
       type: DataTypes.STRING,
       defaultValue: 'USD'
+    },
+    pdfUrl: {  // ✅ ADD THIS TO STORE PDF FILE PATH
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     tableName: 'invoices',
