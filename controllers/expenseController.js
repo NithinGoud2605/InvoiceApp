@@ -1,10 +1,11 @@
 // controllers/expenseController.js
 const { Expense } = require('../models');
+const sequelize = require('../config/sequelize'); // Import the Sequelize instance
 
 exports.getAllExpenses = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      console.error('❌ Error: Missing userId in request.');
+      console.error('❌ Error: Missing user identifier in request.');
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
@@ -54,18 +55,22 @@ exports.getAggregatedExpenses = async (req, res) => {
   }
 };
 
+
 exports.createExpense = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { amount, date, category } = req.body;
-
+    console.log('req.user:', req.user);
+    const userId = req.user && req.user.id ? req.user.id : null;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated properly.' });
+    }
+    const { amount, date, category, description } = req.body;
     const newExpense = await Expense.create({
       userId,
       amount,
       date,
       category,
+      description // New field
     });
-
     return res.status(201).json(newExpense);
   } catch (error) {
     console.error('Error creating expense:', error);
@@ -77,7 +82,7 @@ exports.updateExpense = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { amount, date, category } = req.body;
+    const { amount, date, category, description } = req.body;
 
     const expense = await Expense.findOne({ where: { id, userId } });
     if (!expense) {
@@ -87,6 +92,7 @@ exports.updateExpense = async (req, res) => {
     if (amount !== undefined) expense.amount = amount;
     if (date !== undefined) expense.date = date;
     if (category !== undefined) expense.category = category;
+    if (description !== undefined) expense.description = description; // Update description
 
     await expense.save();
     return res.json(expense);

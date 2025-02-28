@@ -1,59 +1,327 @@
-import React from 'react';
-import { Card, CardContent, Typography, Grid } from '@mui/material';
-import { Line } from 'react-chartjs-2';
+import React, { useState } from 'react';
+import { 
+  Card, CardContent, Typography, Grid, TextField, Box, 
+  FormControl, InputLabel, Select, MenuItem 
+} from '@mui/material';
+import { Line, Bar } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-const TotalsChart = ({ totals, chartData, formatCurrency }) => {
+const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
+  // State for date filter, chart type, and sorting options
+  const [dateFilter, setDateFilter] = useState({
+    fromDate: '',
+    toDate: '',
+    period: 'week', // Options: all, week, month, quarter, year
+  });
+  const [chartType, setChartType] = useState('line'); // Options: line, bar
+  const [sortBy, setSortBy] = useState('date'); // Options: date, amount, category
+  const [sortOrder, setSortOrder] = useState('desc'); // Options: asc, desc
+
+  // Step 1: Calculate effective date range based on filters
+  let effectiveFromDate, effectiveToDate;
+  if (dateFilter.period !== 'all') {
+    const now = new Date();
+    effectiveToDate = new Date();
+    switch (dateFilter.period) {
+      case 'week':
+        effectiveFromDate = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        effectiveFromDate = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'quarter':
+        effectiveFromDate = new Date(now.setMonth(now.getMonth() - 3));
+        break;
+      case 'year':
+        effectiveFromDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      default:
+        break;
+    }
+  } else {
+    effectiveFromDate = dateFilter.fromDate ? new Date(dateFilter.fromDate) : new Date('1900-01-01');
+    effectiveToDate = dateFilter.toDate ? new Date(dateFilter.toDate) : new Date('2100-01-01');
+  }
+
+  // Step 2: Filter and sort expenses
+  const getSortedExpenses = () => {
+    if (!expenses || expenses.length === 0) return [];
+
+    let filtered = expenses.filter(exp => {
+      const expDate = new Date(exp.date);
+      return expDate >= effectiveFromDate && expDate <= effectiveToDate;
+    });
+
+    const multiplier = sortOrder === 'desc' ? -1 : 1;
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'amount':
+          return (Number(b.amount) - Number(a.amount)) * multiplier;
+        case 'category':
+          return a.category.localeCompare(b.category) * multiplier;
+        case 'date':
+        default:
+          return (new Date(b.date) - new Date(a.date)) * multiplier;
+      }
+    });
+  };
+
+  const filteredExpenses = getSortedExpenses();
+  const dynamicTotalExpenses = filteredExpenses.reduce(
+    (sum, exp) => sum + Number(exp.amount),
+    0
+  );
+
+  // Step 3: Determine granularity (daily or monthly) based on date range
+  const daysInRange = (effectiveToDate - effectiveFromDate) / (1000 * 60 * 60 * 24) + 1;
+  const useDailyGranularity = daysInRange <= 31; // Use daily for ranges up to a month
+
+  // Step 4: Aggregate expenses (daily or monthly)
+  const expenseAggregation = {};
+  filteredExpenses.forEach(exp => {
+    const dateObj = new Date(exp.date);
+    const key = useDailyGranularity
+      ? dateObj.toISOString().split('T')[0] // e.g., "2025-02-21"
+      : `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`; // e.g., "2025-02"
+    expenseAggregation[key] = (expenseAggregation[key] || 0) + Number(exp.amount);
+  });
+
+  // Step 5: Generate all labels within the range
+  const generateDateLabels = (startDate, endDate, daily) => {
+    const labels = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      if (daily) {
+        labels.push(currentDate.toISOString().split('T')[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+      } else {
+        const monthLabel = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (!labels.includes(monthLabel)) labels.push(monthLabel);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+    }
+    return labels;
+  };
+
+  const allLabels = generateDateLabels(effectiveFromDate, effectiveToDate, useDailyGranularity);
+
+  // Step 6: Prorate invoice data based on granularity
+  const invoiceData = allLabels.map(label => {
+    const [year, month, day] = label.split('-').map(Number);
+    const matchingMonthLabel = `${year}-${month.toString().padStart(2, '0')}`;
+    const index = chartData.labels.indexOf(matchingMonthLabel);
+    if (index === -1) return 0;
+
+    const invoiceTotal = Number(chartData.invoices[index]);
+    if (useDailyGranularity) {
+      const daysInMonth = new Date(year, month, 0).getDate();
+      return invoiceTotal / daysInMonth; // Distribute evenly across days
+    } else {
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
+      const intersectionStart = new Date(Math.max(monthStart, effectiveFromDate));
+      const intersectionEnd = new Date(Math.min(monthEnd, effectiveToDate));
+      if (intersectionStart > intersectionEnd) return 0;
+      const intersectionDays = (intersectionEnd - intersectionStart) / (1000 * 60 * 60 * 24) + 1;
+      const monthDays = (monthEnd - monthStart) / (1000 * 60 * 60 * 24) + 1;
+      return invoiceTotal * (intersectionDays / monthDays); // Prorate for partial months
+    }
+  });
+
+  const expenseData = allLabels.map(label => expenseAggregation[label] || 0);
+  const filteredTotalInvoices = invoiceData.reduce((sum, val) => sum + val, 0);
+
+  // Chart configuration
+  const chartConfig = {
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: 'Invoices',
+          data: invoiceData,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: chartType === 'bar' ? 'rgba(75, 192, 192, 0.5)' : undefined,
+          tension: chartType === 'line' ? 0.1 : 0,
+        },
+        {
+          label: 'Expenses',
+          data: expenseData,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: chartType === 'bar' ? 'rgba(255, 99, 132, 0.5)' : undefined,
+          tension: chartType === 'line' ? 0.1 : 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: useDailyGranularity ? 'Date' : 'Month' },
+        },
+        y: { 
+          beginAtZero: true,
+          title: { display: true, text: 'Amount' },
+        },
+      },
+    },
+  };
+
   return (
-    <Grid container spacing={2}>
-      <Grid item xs={12} md={6}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6">Totals</Typography>
-            <Grid container>
-              <Grid item xs={6}>
-                <Typography variant="body2">Total Invoices:</Typography>
+    <Box sx={{ p: 3 }}>
+      <Grid container spacing={3}>
+        {/* Filters Section */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>FILTERS</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="From Date"
+                    type="date"
+                    fullWidth
+                    value={dateFilter.fromDate}
+                    onChange={(e) => setDateFilter({ ...dateFilter, fromDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="To Date"
+                    type="date"
+                    fullWidth
+                    value={dateFilter.toDate}
+                    onChange={(e) => setDateFilter({ ...dateFilter, toDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Period</InputLabel>
+                    <Select
+                      value={dateFilter.period}
+                      onChange={(e) => setDateFilter({ ...dateFilter, period: e.target.value })}
+                    >
+                      <MenuItem value="all">All Time</MenuItem>
+                      <MenuItem value="week">Last Week</MenuItem>
+                      <MenuItem value="month">Last Month</MenuItem>
+                      <MenuItem value="quarter">Last Quarter</MenuItem>
+                      <MenuItem value="year">Last Year</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Chart Type</InputLabel>
+                    <Select
+                      value={chartType}
+                      onChange={(e) => setChartType(e.target.value)}
+                    >
+                      <MenuItem value="line">Line Chart</MenuItem>
+                      <MenuItem value="bar">Bar Chart</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
               </Grid>
-              <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                <Typography variant="body2">{formatCurrency(totals.totalInvoices)}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Totals Section */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Totals</Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Typography>Total Invoices:</Typography>
+                </Grid>
+                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                  <Typography>{formatCurrency(filteredTotalInvoices)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>Total Expenses:</Typography>
+                </Grid>
+                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                  <Typography>{formatCurrency(dynamicTotalExpenses)}</Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2">Total Expenses:</Typography>
-              </Grid>
-              <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                <Typography variant="body2">{formatCurrency(totals.totalExpenses)}</Typography>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Chart Section */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Invoices vs Expenses</Typography>
+              {chartType === 'line' ? (
+                <Line data={chartConfig.data} options={chartConfig.options} />
+              ) : (
+                <Bar data={chartConfig.data} options={chartConfig.options} />
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Expenses List with Sorting */}
+        {filteredExpenses.length > 0 && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6">Expense Details</Typography>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl sx={{ minWidth: 120 }}>
+                      <InputLabel>Sort By</InputLabel>
+                      <Select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                      >
+                        <MenuItem value="date">Date</MenuItem>
+                        <MenuItem value="amount">Amount</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Box>
+                <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                  {filteredExpenses.map((exp) => (
+                    <Grid
+                      container
+                      key={exp.id}
+                      spacing={1}
+                      sx={{
+                        py: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        '&:hover': { backgroundColor: 'grey.100' },
+                      }}
+                    >
+                      <Grid item xs={3}>
+                        <Typography>{formatCurrency(exp.amount)}</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography>{new Date(exp.date).toLocaleDateString()}</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography>{exp.category}</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography>{exp.description}</Typography>
+                      </Grid>
+                    </Grid>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
-      <Grid item xs={12} md={6}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6">Invoices vs Expenses</Typography>
-            <Line
-              data={{
-                labels: chartData.labels || [],
-                datasets: [
-                  {
-                    label: 'Invoices',
-                    data: chartData.invoices || [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1,
-                  },
-                  {
-                    label: 'Expenses',
-                    data: chartData.expenses || [],
-                    borderColor: 'rgb(255, 99, 132)',
-                    tension: 0.1,
-                  },
-                ],
-              }}
-            />
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+    </Box>
   );
 };
 

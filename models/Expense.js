@@ -1,3 +1,4 @@
+// models/Expense.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -23,6 +24,10 @@ module.exports = (sequelize) => {
     category: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: true  // Optional field; adjust as needed.
     }
   }, {
     tableName: 'expenses',

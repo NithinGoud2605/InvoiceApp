@@ -8,7 +8,10 @@ import {
   deleteInvoice,
   uploadFile,
   getInvoiceOverview,
+  createExpense,
+  getAllExpenses  // <-- Add this import
 } from '../../services/api';
+
 
 // Import our split components from Invoicecomp
 import InvoicesLineChart from '../../components/Dashcomp/InvoicesLineChart';
@@ -19,7 +22,7 @@ import TotalsChart from './TotalsChart';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
-  const [expenses, setExpenses] = useState([]); // Placeholder – update when expense APIs are ready
+  const [expenses, setExpenses] = useState([]);
   const [totals, setTotals] = useState({ totalInvoices: 0, totalExpenses: 0 });
   const [chartData, setChartData] = useState({
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -39,6 +42,13 @@ export default function InvoicesPage() {
     fetchInvoices();
     fetchExpenses();
     fetchTotals();
+
+    // Poll expenses every 10 seconds (10000 milliseconds)
+    const interval = setInterval(() => {
+      fetchExpenses();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   async function fetchInvoices() {
@@ -67,9 +77,10 @@ export default function InvoicesPage() {
 
   async function fetchExpenses() {
     try {
-      // Replace with an actual API call when implemented.
-      setExpenses([]);
-      console.log('Placeholder for expenses.');
+      const expenseData = await getAllExpenses(); // assuming your API returns { expenses: [...] }
+      // If your API returns the array directly, simply use: setExpenses(expenseData);
+      setExpenses(expenseData.expenses);
+      console.log('Fetched expenses:', expenseData.expenses);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       Swal.fire({
@@ -79,13 +90,14 @@ export default function InvoicesPage() {
       });
     }
   }
+  
 
   async function fetchTotals() {
     try {
       const overview = await getInvoiceOverview();
       setTotals({
         totalInvoices: overview.totalAmount || 0,
-        totalExpenses: 0, // Placeholder for expenses total
+        totalExpenses: 0, // Placeholder for expenses total – update once API is ready.
       });
     } catch (error) {
       console.error('Error fetching totals:', error);
@@ -150,6 +162,26 @@ export default function InvoicesPage() {
     navigate(`/dashboard/invoices/${id}/edit`);
   };
 
+  const handleExpenseSubmit = async (expenseData) => {
+    try {
+      await createExpense(expenseData);
+      Swal.fire({
+        title: 'Success',
+        text: 'Expense added successfully!',
+        icon: 'success',
+      });
+      fetchExpenses();
+      fetchTotals();
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to add expense.',
+        icon: 'error',
+      });
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       {/* Top Section: Charts & Action Buttons */}
@@ -161,7 +193,7 @@ export default function InvoicesPage() {
           <ExpensesLineChart data={chartData} />
         </Grid>
         <Grid item xs={12}>
-          <ActionButtons onFileUpload={handleFileUpload} />
+          <ActionButtons onFileUpload={handleFileUpload} onExpenseSubmit={handleExpenseSubmit} />
         </Grid>
       </Grid>
 
@@ -172,7 +204,7 @@ export default function InvoicesPage() {
         </Typography>
       </Box>
 
-      {/* Recent Invoices Section (max 8 visible with custom scrollbar if extra) */}
+      {/* Recent Invoices Section */}
       <RecentInvoices
         invoices={invoices}
         formatCurrency={formatCurrency}
@@ -180,9 +212,13 @@ export default function InvoicesPage() {
         onDelete={handleDelete}
       />
 
-      {/* Totals & Combined Chart */}
-      <TotalsChart totals={totals} chartData={chartData} formatCurrency={formatCurrency} />
+      {/* Totals, Chart and Expense Details */}
+      <TotalsChart
+        totals={totals}
+        chartData={chartData}
+        formatCurrency={formatCurrency}
+        expenses={expenses} // Pass real-time expenses here
+      />
     </Box>
   );
 }
-
