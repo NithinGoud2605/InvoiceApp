@@ -17,6 +17,7 @@ const uploadController = require('../controllers/uploadController');
 const webhookController = require('../controllers/webhookController');
 const adminController = require('../controllers/adminController');
 const authCallbackController = require('../controllers/authCallbackController');
+const expenseController = require('../controllers/expenseController')
 
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -41,11 +42,21 @@ router.post('/invoices/:id/send', requireAuth, invoiceController.sendInvoice);
 router.get('/invoices/:id', requireAuth, invoiceController.getInvoiceById);
 router.put('/invoices/:id', requireAuth, invoiceController.updateInvoice);
 router.delete('/invoices/:id', requireAuth, invoiceController.deleteInvoice);
+router.get('/invoices/aggregated', requireAuth, invoiceController.getAggregatedInvoices);
+
+router.get('/invoices/:id/pdf', requireAuth, invoiceController.getInvoicePdf);
 
 // Protected Payment Routes
 router.post('/invoices/:id/pay', requireAuth, paymentController.payInvoice);
 router.get('/payments', requireAuth, paymentController.getPayments);
 router.get('/payments/:id', requireAuth, paymentController.getPaymentById);
+
+router.get('/expenses', requireAuth, expenseController.getAllExpenses);
+router.get('/expenses/total', requireAuth, expenseController.getTotalExpenses);
+router.get('/expenses/aggregated', requireAuth, expenseController.getAggregatedExpenses);
+router.post('/expenses', requireAuth, expenseController.createExpense);
+router.put('/expenses/:id', requireAuth, expenseController.updateExpense);
+router.delete('/expenses/:id', requireAuth, expenseController.deleteExpense);
 
 // Protected Bank Integration Routes
 router.get('/bank-accounts', requireAuth, bankController.getBankAccounts);
@@ -79,7 +90,8 @@ router.get('/reports', requireAuth, reportController.getReports);
 router.get('/audit-logs', requireAuth, auditLogController.getAuditLogs);
 
 // Protected File Upload Route
-router.post('/uploads', requireAuth, upload.single('file'), uploadController.uploadInvoice);
+
+router.post('/uploads', requireAuth, uploadController.upload, uploadController.uploadInvoice);
 
 // Public Webhook Route (or protect it based on your design)
 router.post('/webhooks', webhookController.handleWebhook);

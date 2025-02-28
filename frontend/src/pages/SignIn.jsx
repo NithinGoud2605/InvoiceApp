@@ -9,7 +9,7 @@ import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
 import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 import { login } from '../services/api';
-import { UserContext } from '../contexts/UserContext';
+
 
 const Card = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -55,7 +55,7 @@ export default function SignIn(props) {
   const [passwordError, setPasswordError] = useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
-  const { refreshUser } = useContext(UserContext);
+
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -87,7 +87,6 @@ export default function SignIn(props) {
       const response = await login({ email: userEmail, password: userPass });
       localStorage.setItem('token', response.idToken);
       // Immediately refresh the user context
-      await refreshUser();
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err.response ? err.response.data : err.message);

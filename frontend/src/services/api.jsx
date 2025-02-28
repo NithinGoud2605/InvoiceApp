@@ -53,7 +53,8 @@ export const confirmAccount = (confirmationData) => apiRequest('post', '/auth/co
 export const login = (credentials) => apiRequest('post', '/auth/login', credentials);
 export const logout = () => apiRequest('post', '/auth/logout');
 export const forgotPassword = (email) => apiRequest('post', '/auth/forgot-password', { email });
-export const confirmForgotPassword = (email, code, newPassword) => apiRequest('post', '/auth/confirm-forgot-password', { email, code, newPassword });
+export const confirmForgotPassword = (email, code, newPassword) =>
+  apiRequest('post', '/auth/confirm-forgot-password', { email, code, newPassword });
 
 /* ------------- INVOICE ROUTES ------------- */
 export const getAllInvoices = () => apiRequest('get', '/invoices');
@@ -76,6 +77,12 @@ export const getInvoicePdf = async (invoiceId) => {
     throw error;
   }
 };
+
+/* ------------- EXPENSE ROUTES ------------- */
+export const getAllExpenses = () => apiRequest('get', '/expenses');
+export const getExpenseTotal = () => apiRequest('get', '/expenses/total');
+export const getAggregatedExpenses = () => apiRequest('get', '/expenses/aggregated');
+export const deleteExpense = (expenseId) => apiRequest('delete', `/expenses/${expenseId}`);
 
 /* ------------- PAYMENT ROUTES ------------- */
 export const payInvoice = (invoiceId, paymentData = {}) => apiRequest('post', `/invoices/${invoiceId}/pay`, paymentData);
