@@ -157,7 +157,7 @@ export default function InvoicesPage() {
         <Grid item xs={12} md={6}>
           <InvoicesLineChart data={chartData} />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={10} md={6}>
           <ExpensesLineChart data={chartData} />
         </Grid>
         <Grid item xs={12}>
@@ -166,13 +166,13 @@ export default function InvoicesPage() {
       </Grid>
 
       {/* Banner for Recent Invoices */}
-      <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.light', borderRadius: 1 }}>
+      <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.light', borderRadius: '8px' }}>
         <Typography variant="h5" align="center" color="white">
           Recent Invoices
         </Typography>
       </Box>
 
-      {/* Recent Invoices Section */}
+      {/* Recent Invoices Section (max 8 visible with custom scrollbar if extra) */}
       <RecentInvoices
         invoices={invoices}
         formatCurrency={formatCurrency}
@@ -185,3 +185,4 @@ export default function InvoicesPage() {
     </Box>
   );
 }
+

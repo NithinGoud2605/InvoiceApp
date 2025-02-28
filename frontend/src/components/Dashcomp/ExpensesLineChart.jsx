@@ -18,9 +18,11 @@ export default function ExpensesLineChart({ data }) {
   };
 
   return (
-    <Card>
+    <Card variant="outlined" sx={{ minHeight: 350 }}>
       <CardContent>
-        <Typography variant="h6">Expenses Over Time</Typography>
+        <Typography variant="h6" gutterBottom>
+          Expenses Over Time
+        </Typography>
         <Line data={chartData} />
       </CardContent>
     </Card>

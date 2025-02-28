@@ -1,15 +1,25 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Button, Checkbox, CssBaseline, Divider, FormControl, FormControlLabel,
-  FormLabel, Link, Stack, TextField, Typography
+  Box,
+  Button,
+  Checkbox,
+  CssBaseline,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Link,
+  Stack,
+  TextField,
+  Typography
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModelconDropdown';
 import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 import { login } from '../services/api';
-
+import { UserContext } from '../contexts/UserContext';
 
 const Card = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -57,6 +67,7 @@ export default function SignIn(props) {
   const [forgotOpen, setForgotOpen] = useState(false);
 
   const navigate = useNavigate();
+  const { refreshUser } = useContext(UserContext);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -86,7 +97,8 @@ export default function SignIn(props) {
       const userPass = formData.get('password');
       const response = await login({ email: userEmail, password: userPass });
       localStorage.setItem('token', response.idToken);
-      // Immediately refresh the user context
+      // Immediately refresh the user context after setting the token
+      refreshUser();
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err.response ? err.response.data : err.message);
@@ -104,10 +116,19 @@ export default function SignIn(props) {
       <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
         <Card>
-          <Typography component="h1" variant="h4" sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}>
+          <Typography
+            component="h1"
+            variant="h4"
+            sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}
+          >
             Sign in
           </Typography>
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            noValidate
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          >
             <FormControl>
               <FormLabel htmlFor="email">Email</FormLabel>
               <TextField
@@ -141,7 +162,10 @@ export default function SignIn(props) {
                 color={passwordError ? 'error' : 'primary'}
               />
             </FormControl>
-            <FormControlLabel control={<Checkbox value="remember" color="primary" />} label="Remember me" />
+            <FormControlLabel
+              control={<Checkbox value="remember" color="primary" />}
+              label="Remember me"
+            />
             <ForgotPasswordDialog open={forgotOpen} handleClose={handleForgotClose} />
             <Button type="submit" fullWidth variant="contained">
               Sign in

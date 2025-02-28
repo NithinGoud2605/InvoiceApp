@@ -21,7 +21,8 @@ export const UserProvider = ({ children }) => {
       }
 
       console.log('🔍 Fetching user data...');
-      const response = await getMe(token);
+      // Since the axios interceptor adds the token automatically, call getMe without passing token explicitly.
+      const response = await getMe();
 
       if (response && response.user) {
         setUser(response.user);

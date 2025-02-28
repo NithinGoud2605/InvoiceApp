@@ -1,19 +1,13 @@
-// src/components/Dashcomp/InvoicesLineChart.jsx
 import React from 'react';
 import { Card, CardContent, Typography, Chip, Stack } from '@mui/material';
 import { LineChart } from '@mui/x-charts/LineChart';
 
-/**
- * Example line chart that shows invoice count or amount over the past 6 months.
- */
 export default function InvoicesLineChart() {
-  // Example X-axis labels
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  // Example data: total invoice amounts each month
   const invoiceAmounts = [1200, 1500, 2500, 1800, 3000, 4000];
 
   return (
-    <Card variant="outlined">
+    <Card variant="outlined" sx={{ minHeight: 350 }}>
       <CardContent>
         <Typography variant="subtitle2" gutterBottom>
           Invoices Over Last 6 Months
@@ -25,7 +19,6 @@ export default function InvoicesLineChart() {
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Total invoice amount in Jun
         </Typography>
-
         <LineChart
           height={240}
           margin={{ left: 50, top: 20, bottom: 20 }}

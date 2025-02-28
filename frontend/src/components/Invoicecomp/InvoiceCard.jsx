@@ -40,16 +40,16 @@ const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
             Amount: {formatCurrency(invoice.amount)}
           </Typography>
         </Box>
-        {/* PDF preview container with perfect A4 aspect ratio and top margin */}
+        {/* PDF preview container with perfect A4 aspect ratio and top gap */}
         <Box
           sx={{
             width: '100%',
-            aspectRatio: '210/297', // A4 paper ratio (approx 0.707)
+            aspectRatio: '210/297', // A4 paper ratio
             border: '1px solid #ddd',
             borderRadius: '8px',
             overflow: 'hidden',
-            mt: 2, // Adds some gap on top
-            '--scale-factor': '1', // Set this variable to satisfy the viewer
+            mt: 2,
+            '--scale-factor': '1',
           }}
         >
           <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">

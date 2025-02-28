@@ -9,11 +9,7 @@ import Pricing from './components/Mainpage/Pricing';
 import { ThemeProvider } from './shared-theme/ThemeContext';
 import AppTheme from './shared-theme/AppTheme';
 import { UserProvider } from './contexts/UserContext';
-
-function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/sign-in" replace />;
-}
+import PrivateRoute from './PrivateRoute';
 
 function App() {
   return (
@@ -36,6 +32,8 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              {/* Optionally, redirect unknown paths */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
         </UserProvider>
