@@ -3,7 +3,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/Dashcomp/DashboardLayout';
 import DashboardHome from '../components/Dashcomp/DashboardHome';
-import InvoicesPage from '../components/Dashcomp/InvoicesPage';
+import InvoicesPage from '../components/Invoicecomp/InvoicesPage';
 import ContractsPage from '../components/Dashcomp/ContractsPage';
 import SubscriptionGuard from '../components/SubscriptionGuard';
 

@@ -21,3 +21,14 @@ body {
 .slick-dots li.slick-active button:before {
   @apply text-gray-900 dark:text-white;
 }
+
+.rpv-core__viewer,
+.rpv-core__inner {
+  overflow: hidden !important;
+  scrollbar-width: none !important; /* For Firefox */
+}
+
+.rpv-core__viewer::-webkit-scrollbar,
+.rpv-core__inner::-webkit-scrollbar {
+  display: none !important; /* For Chrome, Safari, and Opera */
+}
