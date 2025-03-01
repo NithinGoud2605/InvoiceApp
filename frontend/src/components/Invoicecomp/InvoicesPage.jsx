@@ -9,9 +9,10 @@ import {
   uploadFile,
   getInvoiceOverview,
   createExpense,
-  getAllExpenses  // <-- Add this import
+  getAllExpenses,
+  deleteExpense,
+  updateExpense  // <-- Import updateExpense
 } from '../../services/api';
-
 
 // Import our split components from Invoicecomp
 import InvoicesLineChart from '../../components/Dashcomp/InvoicesLineChart';
@@ -42,13 +43,6 @@ export default function InvoicesPage() {
     fetchInvoices();
     fetchExpenses();
     fetchTotals();
-
-    // Poll expenses every 10 seconds (10000 milliseconds)
-    const interval = setInterval(() => {
-      fetchExpenses();
-    }, 10000);
-
-    return () => clearInterval(interval);
   }, []);
 
   async function fetchInvoices() {
@@ -78,7 +72,6 @@ export default function InvoicesPage() {
   async function fetchExpenses() {
     try {
       const expenseData = await getAllExpenses(); // assuming your API returns { expenses: [...] }
-      // If your API returns the array directly, simply use: setExpenses(expenseData);
       setExpenses(expenseData.expenses);
       console.log('Fetched expenses:', expenseData.expenses);
     } catch (error) {
@@ -91,7 +84,6 @@ export default function InvoicesPage() {
     }
   }
   
-
   async function fetchTotals() {
     try {
       const overview = await getInvoiceOverview();
@@ -182,6 +174,82 @@ export default function InvoicesPage() {
     }
   };
 
+  async function handleDeleteExpense(expenseId) {
+    try {
+      const result = await Swal.fire({
+        title: 'Delete Expense?',
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!',
+      });
+      if (result.isConfirmed) {
+        await deleteExpense(expenseId);
+        Swal.fire({
+          title: 'Deleted!',
+          text: `Expense ${expenseId} deleted successfully.`,
+          icon: 'success',
+        });
+        fetchExpenses();
+        fetchTotals();
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to delete expense.',
+        icon: 'error',
+      });
+    }
+  }
+
+  async function handleUpdateExpense(expense) {
+    // Prompt user for updated values using Swal's HTML input
+    const { value: formValues } = await Swal.fire({
+      title: 'Update Expense',
+      html:
+        `<input id="swal-input1" class="swal2-input" placeholder="Amount" type="number" value="${expense.amount}">` +
+        `<input id="swal-input2" class="swal2-input" placeholder="Date" type="date" value="${expense.date}">` +
+        `<input id="swal-input3" class="swal2-input" placeholder="Category" value="${expense.category}">` +
+        `<input id="swal-input4" class="swal2-input" placeholder="Description" value="${expense.description}">`,
+      focusConfirm: false,
+      preConfirm: () => {
+        return [
+          document.getElementById('swal-input1').value,
+          document.getElementById('swal-input2').value,
+          document.getElementById('swal-input3').value,
+          document.getElementById('swal-input4').value,
+        ];
+      }
+    });
+
+    if (formValues) {
+      const [newAmount, newDate, newCategory, newDescription] = formValues;
+      try {
+        await updateExpense(expense.id, {
+          amount: newAmount,
+          date: newDate,
+          category: newCategory,
+          description: newDescription,
+        });
+        Swal.fire({
+          title: 'Success',
+          text: 'Expense updated successfully!',
+          icon: 'success',
+        });
+        fetchExpenses();
+        fetchTotals();
+      } catch (error) {
+        console.error('Error updating expense:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to update expense.',
+          icon: 'error',
+        });
+      }
+    }
+  }
+
   return (
     <Box sx={{ p: 2 }}>
       {/* Top Section: Charts & Action Buttons */}
@@ -213,11 +281,13 @@ export default function InvoicesPage() {
       />
 
       {/* Totals, Chart and Expense Details */}
-      <TotalsChart
+      <TotalsChart 
         totals={totals}
         chartData={chartData}
         formatCurrency={formatCurrency}
-        expenses={expenses} // Pass real-time expenses here
+        expenses={expenses}
+        onDeleteExpense={handleDeleteExpense}
+        onUpdateExpense={handleUpdateExpense}
       />
     </Box>
   );

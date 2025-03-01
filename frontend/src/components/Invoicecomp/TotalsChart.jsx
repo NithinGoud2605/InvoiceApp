@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { 
   Card, CardContent, Typography, Grid, TextField, Box, 
-  FormControl, InputLabel, Select, MenuItem 
+  FormControl, InputLabel, Select, MenuItem, Button 
 } from '@mui/material';
 import { Line, Bar } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
+const TotalsChart = ({
+  totals,
+  chartData,
+  formatCurrency,
+  expenses,
+  onDeleteExpense,
+  onUpdateExpense
+}) => {
   // State for date filter, chart type, and sorting options
   const [dateFilter, setDateFilter] = useState({
     fromDate: '',
@@ -43,7 +50,7 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
     effectiveToDate = dateFilter.toDate ? new Date(dateFilter.toDate) : new Date('2100-01-01');
   }
 
-  // Step 2: Filter and sort expenses
+  // Step 2: Filter and sort expenses based on effective date range
   const getSortedExpenses = () => {
     if (!expenses || expenses.length === 0) return [];
 
@@ -74,15 +81,15 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
 
   // Step 3: Determine granularity (daily or monthly) based on date range
   const daysInRange = (effectiveToDate - effectiveFromDate) / (1000 * 60 * 60 * 24) + 1;
-  const useDailyGranularity = daysInRange <= 31; // Use daily for ranges up to a month
+  const useDailyGranularity = daysInRange <= 31;
 
   // Step 4: Aggregate expenses (daily or monthly)
   const expenseAggregation = {};
   filteredExpenses.forEach(exp => {
     const dateObj = new Date(exp.date);
     const key = useDailyGranularity
-      ? dateObj.toISOString().split('T')[0] // e.g., "2025-02-21"
-      : `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`; // e.g., "2025-02"
+      ? dateObj.toISOString().split('T')[0]
+      : `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
     expenseAggregation[key] = (expenseAggregation[key] || 0) + Number(exp.amount);
   });
 
@@ -95,7 +102,9 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
         labels.push(currentDate.toISOString().split('T')[0]);
         currentDate.setDate(currentDate.getDate() + 1);
       } else {
-        const monthLabel = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        const monthLabel = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1)
+          .toString()
+          .padStart(2, '0')}`;
         if (!labels.includes(monthLabel)) labels.push(monthLabel);
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
@@ -104,9 +113,11 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
   };
 
   const allLabels = generateDateLabels(effectiveFromDate, effectiveToDate, useDailyGranularity);
+  const dynamicExpenseLabels = allLabels;
+  const dynamicExpenseData = dynamicExpenseLabels.map(label => expenseAggregation[label] || 0);
 
   // Step 6: Prorate invoice data based on granularity
-  const invoiceData = allLabels.map(label => {
+  const invoiceData = dynamicExpenseLabels.map(label => {
     const [year, month, day] = label.split('-').map(Number);
     const matchingMonthLabel = `${year}-${month.toString().padStart(2, '0')}`;
     const index = chartData.labels.indexOf(matchingMonthLabel);
@@ -115,7 +126,7 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
     const invoiceTotal = Number(chartData.invoices[index]);
     if (useDailyGranularity) {
       const daysInMonth = new Date(year, month, 0).getDate();
-      return invoiceTotal / daysInMonth; // Distribute evenly across days
+      return invoiceTotal / daysInMonth;
     } else {
       const monthStart = new Date(year, month - 1, 1);
       const monthEnd = new Date(year, month, 0);
@@ -124,17 +135,16 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
       if (intersectionStart > intersectionEnd) return 0;
       const intersectionDays = (intersectionEnd - intersectionStart) / (1000 * 60 * 60 * 24) + 1;
       const monthDays = (monthEnd - monthStart) / (1000 * 60 * 60 * 24) + 1;
-      return invoiceTotal * (intersectionDays / monthDays); // Prorate for partial months
+      return invoiceTotal * (intersectionDays / monthDays);
     }
   });
 
-  const expenseData = allLabels.map(label => expenseAggregation[label] || 0);
   const filteredTotalInvoices = invoiceData.reduce((sum, val) => sum + val, 0);
 
-  // Chart configuration
+  // Step 7: Chart configuration using dynamic data
   const chartConfig = {
     data: {
-      labels: allLabels,
+      labels: dynamicExpenseLabels,
       datasets: [
         {
           label: 'Invoices',
@@ -145,7 +155,7 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
         },
         {
           label: 'Expenses',
-          data: expenseData,
+          data: dynamicExpenseData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: chartType === 'bar' ? 'rgba(255, 99, 132, 0.5)' : undefined,
           tension: chartType === 'line' ? 0.1 : 0,
@@ -159,13 +169,8 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
         tooltip: { mode: 'index', intersect: false },
       },
       scales: {
-        x: {
-          title: { display: true, text: useDailyGranularity ? 'Date' : 'Month' },
-        },
-        y: { 
-          beginAtZero: true,
-          title: { display: true, text: 'Amount' },
-        },
+        x: { title: { display: true, text: useDailyGranularity ? 'Date' : 'Month' } },
+        y: { beginAtZero: true, title: { display: true, text: 'Amount' } },
       },
     },
   };
@@ -185,7 +190,9 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
                     type="date"
                     fullWidth
                     value={dateFilter.fromDate}
-                    onChange={(e) => setDateFilter({ ...dateFilter, fromDate: e.target.value })}
+                    onChange={(e) =>
+                      setDateFilter({ ...dateFilter, fromDate: e.target.value })
+                    }
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
@@ -195,7 +202,9 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
                     type="date"
                     fullWidth
                     value={dateFilter.toDate}
-                    onChange={(e) => setDateFilter({ ...dateFilter, toDate: e.target.value })}
+                    onChange={(e) =>
+                      setDateFilter({ ...dateFilter, toDate: e.target.value })
+                    }
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
@@ -204,7 +213,9 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
                     <InputLabel>Period</InputLabel>
                     <Select
                       value={dateFilter.period}
-                      onChange={(e) => setDateFilter({ ...dateFilter, period: e.target.value })}
+                      onChange={(e) =>
+                        setDateFilter({ ...dateFilter, period: e.target.value })
+                      }
                     >
                       <MenuItem value="all">All Time</MenuItem>
                       <MenuItem value="week">Last Week</MenuItem>
@@ -268,32 +279,39 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
           </Card>
         </Grid>
 
-        {/* Expenses List with Sorting */}
+        {/* Expenses List with Sorting, Delete & Update Buttons */}
         {filteredExpenses.length > 0 && (
           <Grid item xs={12}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="h6">Expense Details</Typography>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <FormControl sx={{ minWidth: 120 }}>
-                      <InputLabel>Sort By</InputLabel>
-                      <Select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                      >
-                        <MenuItem value="date">Date</MenuItem>
-                        <MenuItem value="amount">Amount</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
+                <Box sx={{ mb: 2 }}>
+                  {/* Header Row */}
+                  <Grid container spacing={1} sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider', pb: 1 }}>
+                    <Grid item xs={2}>
+                      <Typography>Amount</Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography>Date</Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography>Category</Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography>Description</Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography>Action</Typography>
+                    </Grid>
+                  </Grid>
                 </Box>
-                <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                {/* Scrollable List */}
+                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
                   {filteredExpenses.map((exp) => (
                     <Grid
                       container
                       key={exp.id}
                       spacing={1}
+                      alignItems="center"
                       sx={{
                         py: 1,
                         borderBottom: '1px solid',
@@ -301,10 +319,10 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
                         '&:hover': { backgroundColor: 'grey.100' },
                       }}
                     >
-                      <Grid item xs={3}>
+                      <Grid item xs={2}>
                         <Typography>{formatCurrency(exp.amount)}</Typography>
                       </Grid>
-                      <Grid item xs={3}>
+                      <Grid item xs={2}>
                         <Typography>{new Date(exp.date).toLocaleDateString()}</Typography>
                       </Grid>
                       <Grid item xs={3}>
@@ -312,6 +330,24 @@ const TotalsChart = ({ totals, chartData, formatCurrency, expenses }) => {
                       </Grid>
                       <Grid item xs={3}>
                         <Typography>{exp.description}</Typography>
+                      </Grid>
+                      <Grid item xs={2} sx={{ display: 'flex', gap: 1 }}>
+                        <Button 
+                          variant="contained" 
+                          color="warning" 
+                          size="small"
+                          onClick={() => onUpdateExpense && onUpdateExpense(exp)}
+                        >
+                          Update
+                        </Button>
+                        <Button 
+                          variant="contained" 
+                          color="error" 
+                          size="small"
+                          onClick={() => onDeleteExpense && onDeleteExpense(exp.id)}
+                        >
+                          Delete
+                        </Button>
                       </Grid>
                     </Grid>
                   ))}
