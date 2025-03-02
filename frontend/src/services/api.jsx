@@ -121,3 +121,7 @@ export const updateSettings = (settingsData) => apiRequest('put', '/settings', s
 /* ------------- ADMIN ROUTES ------------- */
 export const getAllUsers = () => apiRequest('get', '/admin/users');
 export const updateUser = (userId, userData) => apiRequest('put', `/admin/users/${userId}`, userData);
+
+/* ------------- CLIENT ROUTES ------------- */
+export const getAllClients = () => apiRequest('get', '/clients');
+export const createClient = (clientData) => apiRequest('post', '/clients', clientData);

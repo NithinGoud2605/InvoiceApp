@@ -1,9 +1,7 @@
-// InvoicesPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid } from '@mui/material';
+import { Box, Typography, Grid, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-
 import {
   getAllInvoices,
   getInvoicePdf,
@@ -13,17 +11,19 @@ import {
   createExpense,
   getAllExpenses,
   deleteExpense,
-  updateExpense,         // For updating expense info
-  updateInvoice   // For updating invoice details with missing info
+  updateExpense,
+  updateInvoice,
+  getAllClients,
+  createClient,
 } from '../../services/api';
 
-// Import our split components from Invoicecomp
 import InvoicesLineChart from '../../components/Dashcomp/InvoicesLineChart';
 import ExpensesLineChart from '../../components/Dashcomp/ExpensesLineChart';
 import ActionButtons from './ActionButtons';
 import RecentInvoices from './RecentInvoices';
 import TotalsChart from './TotalsChart';
-import MissingInfoModal from './MissingInfoModal'; // Modal to ask user for missing details
+import MissingInfoModal from './MissingInfoModal';
+import EditInvoiceModal from './EditInvoiceModal';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -34,11 +34,13 @@ export default function InvoicesPage() {
     invoices: [10, 15, 20, 25, 30, 35],
     expenses: [5, 10, 15, 10, 5, 10],
   });
-
-  // State for missing fields info after invoice upload
   const [missingFields, setMissingFields] = useState([]);
   const [invoiceIdToUpdate, setInvoiceIdToUpdate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [existingClients, setExistingClients] = useState([]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -52,18 +54,29 @@ export default function InvoicesPage() {
     fetchInvoices();
     fetchExpenses();
     fetchTotals();
+    fetchClients();
   }, []);
 
   async function fetchInvoices() {
     try {
       const data = await getAllInvoices();
-      // Sort descending by created_at and take the 10 most recent
       const sortedInvoices = await Promise.all(
         data.invoices
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           .slice(0, 10)
           .map(async (invoice) => {
             const pdfData = await getInvoicePdf(invoice.id);
+            if (invoice.clientId && !invoice.clientName) {
+              const client = existingClients.find((c) => c.id === invoice.clientId);
+              return {
+                ...invoice,
+                clientName: client?.name || invoice.clientName,
+                clientEmail: client?.email || invoice.clientEmail,
+                clientPhone: client?.phone || invoice.clientPhone,
+                clientAddress: client?.address || invoice.clientAddress,
+                pdfUrl: pdfData.url,
+              };
+            }
             return { ...invoice, pdfUrl: pdfData.url };
           })
       );
@@ -80,9 +93,8 @@ export default function InvoicesPage() {
 
   async function fetchExpenses() {
     try {
-      const expenseData = await getAllExpenses(); // assuming your API returns { expenses: [...] }
+      const expenseData = await getAllExpenses();
       setExpenses(expenseData.expenses);
-      console.log('Fetched expenses:', expenseData.expenses);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       Swal.fire({
@@ -98,7 +110,7 @@ export default function InvoicesPage() {
       const overview = await getInvoiceOverview();
       setTotals({
         totalInvoices: overview.totalAmount || 0,
-        totalExpenses: 0, // Placeholder for expenses total – update once API is ready.
+        totalExpenses: 0,
       });
     } catch (error) {
       console.error('Error fetching totals:', error);
@@ -111,9 +123,19 @@ export default function InvoicesPage() {
     }
   }
 
+  async function fetchClients() {
+    try {
+      const clientData = await getAllClients();
+      setExistingClients(clientData.clients || []);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  }
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    setIsUploading(true);
     try {
       const response = await uploadFile(file);
       Swal.fire({
@@ -121,7 +143,6 @@ export default function InvoicesPage() {
         text: 'Invoice uploaded successfully!',
         icon: 'success',
       });
-      // Check if there are missing fields in the response
       if (response.missingFields && response.missingFields.length > 0) {
         setMissingFields(response.missingFields);
         setInvoiceIdToUpdate(response.invoiceId);
@@ -136,14 +157,25 @@ export default function InvoicesPage() {
         icon: 'error',
       });
     }
+    setIsUploading(false);
   };
 
-  // Handler for missing info modal submission
   const handleMissingInfoSubmit = async (filledData) => {
     try {
-      // Call an API to update the invoice with the missing details.
-      // For example, if you have an endpoint updateInvoiceDetails(invoiceId, data)
-      await updateInvoice(invoiceIdToUpdate, filledData);
+      let updateData = {
+        ...(filledData.totalAmount && { amount: filledData.totalAmount }),
+        ...(filledData.dueDate && { dueDate: filledData.dueDate }),
+      };
+  
+      if (filledData.newClient) {
+        const newClient = await createClient(filledData.newClient);
+        updateData.clientId = newClient.id;
+      } else {
+        updateData.clientId = filledData.clientId || null;
+      }
+  
+      console.log('Updating invoice with:', updateData);
+      await updateInvoice(invoiceIdToUpdate, updateData);
       Swal.fire({
         title: 'Success',
         text: 'Invoice updated successfully!',
@@ -161,7 +193,54 @@ export default function InvoicesPage() {
     }
   };
 
-  async function handleDelete(id) {
+  const handleEdit = (id) => {
+    const invoice = invoices.find((inv) => inv.id === id);
+    if (invoice) {
+      setSelectedInvoice(invoice);
+      setEditModalOpen(true);
+    }
+  };
+  
+  const handleEditSubmit = async (updatedData) => {
+    try {
+      let invoiceData = {
+        amount: updatedData.totalAmount, // Changed key from totalAmount to amount
+        dueDate: updatedData.dueDate,
+      };
+  
+      if (updatedData.newClient) {
+        const newClient = await createClient(updatedData.newClient);
+        invoiceData.clientId = newClient.id;
+        invoiceData.clientName = newClient.name;
+        invoiceData.clientEmail = newClient.email;
+        invoiceData.clientPhone = newClient.phone;
+        invoiceData.clientAddress = newClient.address;
+        setExistingClients((prev) => [...prev, newClient]);
+      } else if (updatedData.clientId) {
+        invoiceData.clientId = updatedData.clientId;
+      }
+      
+      console.log('Sending update payload:', invoiceData);
+      await updateInvoice(selectedInvoice.id, invoiceData);
+      Swal.fire({
+        title: 'Success',
+        text: 'Invoice updated successfully!',
+        icon: 'success',
+      });
+      setEditModalOpen(false);
+      fetchInvoices();
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to update invoice. Please try again.',
+        icon: 'error',
+      });
+    }
+  };
+  
+  
+  const handleDelete = async (id) => {
     try {
       const { isConfirmed } = await Swal.fire({
         title: 'Delete Invoice?',
@@ -186,10 +265,6 @@ export default function InvoicesPage() {
         icon: 'error',
       });
     }
-  }
-
-  const handleEdit = (id) => {
-    navigate(`/dashboard/invoices/${id}/edit`);
   };
 
   const handleExpenseSubmit = async (expenseData) => {
@@ -215,7 +290,7 @@ export default function InvoicesPage() {
   async function handleDeleteExpense(expenseId) {
     try {
       const result = await Swal.fire({
-        title: 'Delete Expense?',
+        title: 'Delete Expense',
         text: 'This action cannot be undone.',
         icon: 'warning',
         showCancelButton: true,
@@ -242,7 +317,6 @@ export default function InvoicesPage() {
   }
 
   async function handleUpdateExpense(expense) {
-    // Prompt user for updated values using Swal's HTML input
     const { value: formValues } = await Swal.fire({
       title: 'Update Expense',
       html:
@@ -258,7 +332,7 @@ export default function InvoicesPage() {
           document.getElementById('swal-input3').value,
           document.getElementById('swal-input4').value,
         ];
-      }
+      },
     });
 
     if (formValues) {
@@ -290,12 +364,11 @@ export default function InvoicesPage() {
 
   return (
     <Box sx={{ p: 2 }}>
-      {/* Top Section: Charts & Action Buttons */}
       <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           <InvoicesLineChart data={chartData} />
         </Grid>
-        <Grid item xs={10} md={6}>
+        <Grid item xs={12} md={6}>
           <ExpensesLineChart data={chartData} />
         </Grid>
         <Grid item xs={12}>
@@ -303,14 +376,12 @@ export default function InvoicesPage() {
         </Grid>
       </Grid>
 
-      {/* Banner for Recent Invoices */}
       <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.light', borderRadius: '8px' }}>
         <Typography variant="h5" align="center" color="white">
           Recent Invoices
         </Typography>
       </Box>
 
-      {/* Recent Invoices Section */}
       <RecentInvoices
         invoices={invoices}
         formatCurrency={formatCurrency}
@@ -318,8 +389,7 @@ export default function InvoicesPage() {
         onDelete={handleDelete}
       />
 
-      {/* Totals, Chart and Expense Details */}
-      <TotalsChart 
+      <TotalsChart
         totals={totals}
         chartData={chartData}
         formatCurrency={formatCurrency}
@@ -328,13 +398,32 @@ export default function InvoicesPage() {
         onUpdateExpense={handleUpdateExpense}
       />
 
-      {/* Missing Info Modal for any fields Textract could not auto-detect */}
       <MissingInfoModal
         open={modalOpen}
         missingFields={missingFields}
         onSubmit={handleMissingInfoSubmit}
         onClose={() => setModalOpen(false)}
+        existingClients={existingClients}
       />
+
+      {editModalOpen && (
+        <EditInvoiceModal
+          open={editModalOpen}
+          invoice={selectedInvoice}
+          existingClients={existingClients}
+          onSubmit={handleEditSubmit}
+          onClose={() => setEditModalOpen(false)}
+        />
+      )}
+
+      {isUploading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <CircularProgress />
+          <Typography variant="body1" sx={{ ml: 1 }}>
+            Uploading...
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }

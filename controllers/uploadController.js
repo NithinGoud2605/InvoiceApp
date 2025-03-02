@@ -1,20 +1,19 @@
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const { Invoice, Client } = require('../models'); // Adjust based on your project structure
+const { Invoice, Client } = require('../models'); // Ensure these models are properly imported
 const { uploadToS3 } = require('../utils/s3Uploader');
 
-// Configure AWS SDK: Load credentials from the "nithin" profile and update region
+// Configure AWS SDK to load credentials from the "nithin" profile and set the region
 AWS.config.credentials = new AWS.SharedIniFileCredentials({ profile: 'nithin' });
 AWS.config.update({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const textract = new AWS.Textract();
 
-// Use memory storage so the file buffer is available for S3 upload and Textract processing
+// Use memory storage so that the file buffer is available for both S3 upload and Textract processing
 const upload = multer({ storage: multer.memoryStorage() });
 
 /**
- * Extracts invoice data (total amount, due date, client name) using AWS Textract.
- * It uses the "FORMS" feature to get key–value pairs from the document.
+ * Extracts invoice data (totalAmount, dueDate, clientName) using AWS Textract.
  */
 async function extractInvoiceData(fileBuffer) {
   const params = {
@@ -29,7 +28,7 @@ async function extractInvoiceData(fileBuffer) {
     let keyMap = {};
     let valueMap = {};
 
-    // Index all blocks by their ID and separate KEY and VALUE blocks
+    // Index all blocks by their ID and separate key and value blocks
     blocks.forEach(block => {
       blockMap[block.Id] = block;
       if (block.BlockType === 'KEY_VALUE_SET') {
@@ -41,7 +40,7 @@ async function extractInvoiceData(fileBuffer) {
       }
     });
 
-    // Helper function to extract text from a block by iterating through its CHILD relationships
+    // Helper function to extract text from a block via its CHILD relationships
     const getText = (block) => {
       let text = '';
       if (block.Relationships) {
@@ -59,7 +58,7 @@ async function extractInvoiceData(fileBuffer) {
       return text.trim();
     };
 
-    // Build a key-value object from Textract blocks
+    // Combine key blocks with their corresponding value blocks to build an object of invoice data
     let invoiceData = {};
     Object.values(keyMap).forEach(keyBlock => {
       let keyText = getText(keyBlock).toLowerCase();
@@ -78,7 +77,7 @@ async function extractInvoiceData(fileBuffer) {
       }
     });
 
-    // Parse out specific fields – adjust keys based on your invoice format
+    // Extract specific fields – adjust keys based on your invoice format
     const totalAmount = invoiceData['total']
       ? parseFloat(invoiceData['total'].replace(/[^0-9.]/g, ''))
       : 0;
@@ -94,12 +93,9 @@ async function extractInvoiceData(fileBuffer) {
 
 /**
  * Main controller function for invoice upload.
- * It performs these steps:
- *   1. Creates an invoice record with default values to satisfy non-null constraints.
- *   2. Uploads the file to S3.
- *   3. Extracts invoice data via Textract.
- *   4. Determines which fields (totalAmount, dueDate, clientName) were not auto-detected.
- *   5. Returns a response with invoice details and missingFields for the frontend.
+ * It creates an invoice record, uploads the file to S3, extracts invoice data via Textract,
+ * and integrates the client information by updating/creating a Client record.
+ * Returns a response with the invoice details, including clientId, and an array of missing fields.
  */
 async function uploadInvoice(req, res) {
   try {
@@ -112,7 +108,7 @@ async function uploadInvoice(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Step 1: Create an invoice record with default values
+    // Step 1: Create an invoice record with default values (to satisfy not-null constraints)
     let invoice = await Invoice.create({
       userId,
       status: 'DRAFT',
@@ -122,12 +118,12 @@ async function uploadInvoice(req, res) {
       pdfUrl: null
     });
 
-    // Step 2: Upload file to S3
+    // Step 2: Upload the file to S3 and update invoice.pdfUrl with the generated file key
     const fileKey = `invoices/${invoice.id}.pdf`;
     const s3Url = await uploadToS3(req.file.buffer, fileKey);
     invoice.pdfUrl = fileKey;
 
-    // Step 3: Extract invoice data using AWS Textract
+    // Step 3: Use AWS Textract to extract invoice data
     const extractedData = await extractInvoiceData(req.file.buffer);
     const missingFields = [];
 
@@ -138,12 +134,10 @@ async function uploadInvoice(req, res) {
       missingFields.push('totalAmount');
     }
 
-    // Validate and update dueDate if extracted; otherwise, mark as missing.
-    // Check if the extracted dueDate is valid.
+    // Validate and update dueDate
     if (extractedData.dueDate) {
       const parsedDueDate = new Date(extractedData.dueDate);
       if (isNaN(parsedDueDate.getTime())) {
-        // The extracted dueDate is invalid.
         missingFields.push('dueDate');
       } else {
         invoice.dueDate = parsedDueDate;
@@ -152,9 +146,10 @@ async function uploadInvoice(req, res) {
       missingFields.push('dueDate');
     }
 
-    // Process clientName: if detected, update invoice; otherwise, mark as missing.
+    // Integrate client information:
+    // If clientName is extracted, attempt to find an existing Client (for this user) or create a new one.
     if (extractedData.clientName) {
-      let client = await Client.findOne({ where: { name: extractedData.clientName } });
+      let client = await Client.findOne({ where: { name: extractedData.clientName, userId } });
       if (!client) {
         client = await Client.create({ name: extractedData.clientName, userId });
       }
@@ -165,7 +160,7 @@ async function uploadInvoice(req, res) {
 
     await invoice.save();
 
-    // Return response including missingFields so frontend can prompt for them.
+    // Return the invoice details (including clientId) along with any missing fields.
     return res.json({
       message: missingFields.length > 0
         ? 'Upload successful, but some details are missing.'
@@ -175,6 +170,7 @@ async function uploadInvoice(req, res) {
       totalAmount: invoice.totalAmount,
       dueDate: invoice.dueDate,
       clientName: extractedData.clientName || null,
+      clientId: invoice.clientId || null,
       missingFields: missingFields
     });
   } catch (error) {

@@ -18,6 +18,8 @@ const webhookController = require('../controllers/webhookController');
 const adminController = require('../controllers/adminController');
 const authCallbackController = require('../controllers/authCallbackController');
 const expenseController = require('../controllers/expenseController')
+const clientController = require('../controllers/clientController')
+
 
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -70,6 +72,12 @@ router.put('/contracts/:id', requireAuth, contractController.updateContract);
 router.post('/contracts/:id/cancel', requireAuth, contractController.cancelContract);
 router.post('/contracts/:id/renew', requireAuth, contractController.renewContract);
 router.post('/contracts/:id/send-for-signature', requireAuth, contractController.sendForSignature);
+
+router.get('/clients', requireAuth, clientController.getClients);
+router.post('/clients', requireAuth, clientController.createClient);
+router.put('/clients/:id', requireAuth, clientController.updateClient);
+router.delete('/clients/:id', requireAuth, clientController.deleteClient);
+
 
 // Protected User Routes
 router.get('/users/me', requireAuth, userController.getMe);

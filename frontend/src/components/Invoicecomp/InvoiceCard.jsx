@@ -4,6 +4,9 @@ import { Worker, Viewer, SpecialZoomLevel } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 
 const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
+  const isComplete =
+    invoice.clientName && invoice.dueDate && invoice.totalAmount && parseFloat(invoice.totalAmount) > 0;
+
   return (
     <Card
       sx={{
@@ -12,7 +15,7 @@ const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
         flexDirection: 'column',
         borderRadius: '16px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #e0e0e0',
+        border: isComplete ? '2px solid green' : '2px solid red',
         transition: 'transform 0.3s, box-shadow 0.3s',
         '&:hover': {
           transform: 'translateY(-4px)',
@@ -31,16 +34,15 @@ const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
       >
         <Box>
           <Typography variant="h6" gutterBottom>
-            {invoice.customerName}
+            Client: {invoice.clientName || 'Missing Client Info'}
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            ID: {invoice.id}
+            Due Date: {invoice.dueDate || 'Missing Due Date'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Amount: {formatCurrency(invoice.amount)}
+            Amount: {invoice.totalAmount ? formatCurrency(invoice.totalAmount) : 'Missing Amount'}
           </Typography>
         </Box>
-        {/* PDF preview container with perfect A4 aspect ratio and top gap */}
         <Box
           sx={{
             width: '100%',
@@ -49,7 +51,6 @@ const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
             borderRadius: '8px',
             overflow: 'hidden',
             mt: 2,
-            '--scale-factor': '1',
           }}
         >
           <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
