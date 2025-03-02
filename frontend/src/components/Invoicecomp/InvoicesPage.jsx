@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Invoicecomp/InvoicesPage.jsx
+import React from 'react';
 import { Box, Typography, Grid, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { useQuery } from '@tanstack/react-query';
 import {
   getAllInvoices,
   getInvoicePdf,
@@ -26,22 +28,6 @@ import MissingInfoModal from './MissingInfoModal';
 import EditInvoiceModal from './EditInvoiceModal';
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [totals, setTotals] = useState({ totalInvoices: 0, totalExpenses: 0 });
-  const [chartData, setChartData] = useState({
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    invoices: [10, 15, 20, 25, 30, 35],
-    expenses: [5, 10, 15, 10, 5, 10],
-  });
-  const [missingFields, setMissingFields] = useState([]);
-  const [invoiceIdToUpdate, setInvoiceIdToUpdate] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [existingClients, setExistingClients] = useState([]);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-
   const navigate = useNavigate();
 
   const formatCurrency = (amount) =>
@@ -50,87 +36,89 @@ export default function InvoicesPage() {
       currency: 'USD',
     }).format(amount);
 
-  useEffect(() => {
-    fetchInvoices();
-    fetchExpenses();
-    fetchTotals();
-    fetchClients();
-  }, []);
+  // Retain your chartData state as before
+  const [chartData, setChartData] = React.useState({
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    invoices: [10, 15, 20, 25, 30, 35],
+    expenses: [5, 10, 15, 10, 5, 10],
+  });
 
-  async function fetchInvoices() {
-    try {
+  // Fetch invoices using the new object-based API
+  const {
+    data: invoicesData,
+    isLoading: invoicesLoading,
+    refetch: refetchInvoices,
+  } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
       const data = await getAllInvoices();
-      const sortedInvoices = await Promise.all(
+      return Promise.all(
         data.invoices
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           .slice(0, 10)
           .map(async (invoice) => {
             const pdfData = await getInvoicePdf(invoice.id);
-            if (invoice.clientId && !invoice.clientName) {
-              const client = existingClients.find((c) => c.id === invoice.clientId);
-              return {
-                ...invoice,
-                clientName: client?.name || invoice.clientName,
-                clientEmail: client?.email || invoice.clientEmail,
-                clientPhone: client?.phone || invoice.clientPhone,
-                clientAddress: client?.address || invoice.clientAddress,
-                pdfUrl: pdfData.url,
-              };
-            }
             return { ...invoice, pdfUrl: pdfData.url };
           })
       );
-      setInvoices(sortedInvoices || []);
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to fetch invoices.',
-        icon: 'error',
-      });
-    }
-  }
+    },
+  });
 
-  async function fetchExpenses() {
-    try {
+  // Fetch expenses using the object-based API
+  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
       const expenseData = await getAllExpenses();
-      setExpenses(expenseData.expenses);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to fetch expenses.',
-        icon: 'error',
-      });
-    }
-  }
+      return expenseData.expenses;
+    },
+  });
 
-  async function fetchTotals() {
-    try {
+  // Fetch invoice overview (totals)
+  const { data: overviewData, isLoading: overviewLoading } = useQuery({
+    queryKey: ['overview'],
+    queryFn: async () => {
       const overview = await getInvoiceOverview();
-      setTotals({
-        totalInvoices: overview.totalAmount || 0,
-        totalExpenses: 0,
-      });
-    } catch (error) {
-      console.error('Error fetching totals:', error);
-      setTotals({ totalInvoices: 0, totalExpenses: 0 });
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to fetch totals.',
-        icon: 'error',
-      });
-    }
-  }
+      return overview;
+    },
+  });
 
-  async function fetchClients() {
-    try {
+  // Fetch clients using the new API
+  const { data: clientsData, isLoading: clientsLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
       const clientData = await getAllClients();
-      setExistingClients(clientData.clients || []);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-    }
-  }
+      return clientData.clients;
+    },
+  });
+
+  // Default values if the data hasn't loaded yet
+  const invoices = invoicesData || [];
+  const expenses = expensesData || [];
+  const totals = { totalInvoices: overviewData?.totalAmount || 0, totalExpenses: 0 };
+  const existingClients = clientsData || [];
+
+  // Check if any query is still loading
+  const isLoading = invoicesLoading || expensesLoading || overviewLoading || clientsLoading;
+
+  // Enrich invoices with clientName from existingClients if not present
+  const enrichedInvoices = React.useMemo(() => {
+    return invoices.map((invoice) => {
+      // If invoice has a clientId but no clientName, try to get it from existingClients
+      if (invoice.clientId && !invoice.clientName && existingClients.length > 0) {
+        const client = existingClients.find((c) => c.id === invoice.clientId);
+        return { ...invoice, clientName: client?.name || invoice.clientName };
+      }
+      return invoice;
+    });
+  }, [invoices, existingClients]);
+
+  // Local component states
+  const [missingFields, setMissingFields] = React.useState([]);
+  const [invoiceIdToUpdate, setInvoiceIdToUpdate] = React.useState(null);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editModalOpen, setEditModalOpen] = React.useState(false);
+  const [selectedInvoice, setSelectedInvoice] = React.useState(null);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -148,7 +136,7 @@ export default function InvoicesPage() {
         setInvoiceIdToUpdate(response.invoiceId);
         setModalOpen(true);
       }
-      fetchInvoices();
+      refetchInvoices();
     } catch (error) {
       console.error('Upload failed:', error);
       Swal.fire({
@@ -166,14 +154,14 @@ export default function InvoicesPage() {
         ...(filledData.totalAmount && { amount: filledData.totalAmount }),
         ...(filledData.dueDate && { dueDate: filledData.dueDate }),
       };
-  
+
       if (filledData.newClient) {
         const newClient = await createClient(filledData.newClient);
         updateData.clientId = newClient.id;
       } else {
         updateData.clientId = filledData.clientId || null;
       }
-  
+
       console.log('Updating invoice with:', updateData);
       await updateInvoice(invoiceIdToUpdate, updateData);
       Swal.fire({
@@ -182,7 +170,7 @@ export default function InvoicesPage() {
         icon: 'success',
       });
       setModalOpen(false);
-      fetchInvoices();
+      refetchInvoices();
     } catch (error) {
       console.error('Error updating invoice:', error);
       Swal.fire({
@@ -194,20 +182,20 @@ export default function InvoicesPage() {
   };
 
   const handleEdit = (id) => {
-    const invoice = invoices.find((inv) => inv.id === id);
+    const invoice = enrichedInvoices.find((inv) => inv.id === id);
     if (invoice) {
       setSelectedInvoice(invoice);
       setEditModalOpen(true);
     }
   };
-  
+
   const handleEditSubmit = async (updatedData) => {
     try {
       let invoiceData = {
         amount: updatedData.totalAmount, // Changed key from totalAmount to amount
         dueDate: updatedData.dueDate,
       };
-  
+
       if (updatedData.newClient) {
         const newClient = await createClient(updatedData.newClient);
         invoiceData.clientId = newClient.id;
@@ -215,11 +203,10 @@ export default function InvoicesPage() {
         invoiceData.clientEmail = newClient.email;
         invoiceData.clientPhone = newClient.phone;
         invoiceData.clientAddress = newClient.address;
-        setExistingClients((prev) => [...prev, newClient]);
       } else if (updatedData.clientId) {
         invoiceData.clientId = updatedData.clientId;
       }
-      
+
       console.log('Sending update payload:', invoiceData);
       await updateInvoice(selectedInvoice.id, invoiceData);
       Swal.fire({
@@ -228,7 +215,7 @@ export default function InvoicesPage() {
         icon: 'success',
       });
       setEditModalOpen(false);
-      fetchInvoices();
+      refetchInvoices();
     } catch (error) {
       console.error('Error updating invoice:', error);
       Swal.fire({
@@ -238,8 +225,7 @@ export default function InvoicesPage() {
       });
     }
   };
-  
-  
+
   const handleDelete = async (id) => {
     try {
       const { isConfirmed } = await Swal.fire({
@@ -251,7 +237,7 @@ export default function InvoicesPage() {
       });
       if (!isConfirmed) return;
       await deleteInvoice(id);
-      fetchInvoices();
+      refetchInvoices();
       Swal.fire({
         title: 'Deleted!',
         text: 'Invoice deleted successfully.',
@@ -267,99 +253,13 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleExpenseSubmit = async (expenseData) => {
-    try {
-      await createExpense(expenseData);
-      Swal.fire({
-        title: 'Success',
-        text: 'Expense added successfully!',
-        icon: 'success',
-      });
-      fetchExpenses();
-      fetchTotals();
-    } catch (error) {
-      console.error('Error adding expense:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to add expense.',
-        icon: 'error',
-      });
-    }
-  };
-
-  async function handleDeleteExpense(expenseId) {
-    try {
-      const result = await Swal.fire({
-        title: 'Delete Expense',
-        text: 'This action cannot be undone.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-      });
-      if (result.isConfirmed) {
-        await deleteExpense(expenseId);
-        Swal.fire({
-          title: 'Deleted!',
-          text: `Expense ${expenseId} deleted successfully.`,
-          icon: 'success',
-        });
-        fetchExpenses();
-        fetchTotals();
-      }
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to delete expense.',
-        icon: 'error',
-      });
-    }
-  }
-
-  async function handleUpdateExpense(expense) {
-    const { value: formValues } = await Swal.fire({
-      title: 'Update Expense',
-      html:
-        `<input id="swal-input1" class="swal2-input" placeholder="Amount" type="number" value="${expense.amount}">` +
-        `<input id="swal-input2" class="swal2-input" placeholder="Date" type="date" value="${expense.date}">` +
-        `<input id="swal-input3" class="swal2-input" placeholder="Category" value="${expense.category}">` +
-        `<input id="swal-input4" class="swal2-input" placeholder="Description" value="${expense.description}">`,
-      focusConfirm: false,
-      preConfirm: () => {
-        return [
-          document.getElementById('swal-input1').value,
-          document.getElementById('swal-input2').value,
-          document.getElementById('swal-input3').value,
-          document.getElementById('swal-input4').value,
-        ];
-      },
-    });
-
-    if (formValues) {
-      const [newAmount, newDate, newCategory, newDescription] = formValues;
-      try {
-        await updateExpense(expense.id, {
-          amount: newAmount,
-          date: newDate,
-          category: newCategory,
-          description: newDescription,
-        });
-        Swal.fire({
-          title: 'Success',
-          text: 'Expense updated successfully!',
-          icon: 'success',
-        });
-        fetchExpenses();
-        fetchTotals();
-      } catch (error) {
-        console.error('Error updating expense:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'Failed to update expense.',
-          icon: 'error',
-        });
-      }
-    }
+  // Render a loading state if any query is still in progress
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -372,7 +272,7 @@ export default function InvoicesPage() {
           <ExpensesLineChart data={chartData} />
         </Grid>
         <Grid item xs={12}>
-          <ActionButtons onFileUpload={handleFileUpload} onExpenseSubmit={handleExpenseSubmit} />
+          <ActionButtons onFileUpload={handleFileUpload} onExpenseSubmit={() => {}} />
         </Grid>
       </Grid>
 
@@ -383,7 +283,7 @@ export default function InvoicesPage() {
       </Box>
 
       <RecentInvoices
-        invoices={invoices}
+        invoices={enrichedInvoices}
         formatCurrency={formatCurrency}
         onEdit={handleEdit}
         onDelete={handleDelete}
@@ -394,8 +294,8 @@ export default function InvoicesPage() {
         chartData={chartData}
         formatCurrency={formatCurrency}
         expenses={expenses}
-        onDeleteExpense={handleDeleteExpense}
-        onUpdateExpense={handleUpdateExpense}
+        onDeleteExpense={() => {}}
+        onUpdateExpense={() => {}}
       />
 
       <MissingInfoModal

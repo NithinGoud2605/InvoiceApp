@@ -6,22 +6,27 @@ import DashboardHome from '../components/Dashcomp/DashboardHome';
 import InvoicesPage from '../components/Invoicecomp/InvoicesPage';
 import ContractsPage from '../components/Dashcomp/ContractsPage';
 import SubscriptionGuard from '../components/SubscriptionGuard';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 export default function Dashboard() {
   return (
-    <Routes>
-      <Route path="/" element={<DashboardLayout />}>
-        <Route index element={<DashboardHome />} />
-        <Route path="invoices" element={<InvoicesPage />} />
-        <Route
-          path="contracts"
-          element={
-            <SubscriptionGuard>
-              <ContractsPage />
-            </SubscriptionGuard>
-          }
-        />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<DashboardLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="invoices" element={<InvoicesPage />} />
+          <Route
+            path="contracts"
+            element={
+              <SubscriptionGuard>
+                <ContractsPage />
+              </SubscriptionGuard>
+            }
+          />
+        </Route>
+      </Routes>
+      {/* React Query Devtools can be helpful for debugging */}
+      <ReactQueryDevtools initialIsOpen={false} />
+    </>
   );
 }

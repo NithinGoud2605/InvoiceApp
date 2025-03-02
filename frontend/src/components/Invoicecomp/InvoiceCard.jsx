@@ -4,8 +4,11 @@ import { Worker, Viewer, SpecialZoomLevel } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 
 const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
+  // Trim the clientName to remove extra spaces
+  const clientName = invoice.clientName ? invoice.clientName.trim() : '';
+
   const isComplete =
-    invoice.clientName && invoice.dueDate && invoice.totalAmount && parseFloat(invoice.totalAmount) > 0;
+    clientName && invoice.dueDate && invoice.totalAmount && parseFloat(invoice.totalAmount) > 0;
 
   return (
     <Card
@@ -34,7 +37,7 @@ const InvoiceCard = ({ invoice, formatCurrency, onEdit, onDelete }) => {
       >
         <Box>
           <Typography variant="h6" gutterBottom>
-            Client: {invoice.clientName || 'Missing Client Info'}
+            Client: {clientName || 'Missing Client Info'}
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Due Date: {invoice.dueDate || 'Missing Due Date'}
