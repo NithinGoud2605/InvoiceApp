@@ -1,7 +1,9 @@
+// InvoicesPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+
 import {
   getAllInvoices,
   getInvoicePdf,
@@ -11,7 +13,8 @@ import {
   createExpense,
   getAllExpenses,
   deleteExpense,
-  updateExpense  // <-- Import updateExpense
+  updateExpense,         // For updating expense info
+  updateInvoice   // For updating invoice details with missing info
 } from '../../services/api';
 
 // Import our split components from Invoicecomp
@@ -20,6 +23,7 @@ import ExpensesLineChart from '../../components/Dashcomp/ExpensesLineChart';
 import ActionButtons from './ActionButtons';
 import RecentInvoices from './RecentInvoices';
 import TotalsChart from './TotalsChart';
+import MissingInfoModal from './MissingInfoModal'; // Modal to ask user for missing details
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -30,6 +34,11 @@ export default function InvoicesPage() {
     invoices: [10, 15, 20, 25, 30, 35],
     expenses: [5, 10, 15, 10, 5, 10],
   });
+
+  // State for missing fields info after invoice upload
+  const [missingFields, setMissingFields] = useState([]);
+  const [invoiceIdToUpdate, setInvoiceIdToUpdate] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -83,7 +92,7 @@ export default function InvoicesPage() {
       });
     }
   }
-  
+
   async function fetchTotals() {
     try {
       const overview = await getInvoiceOverview();
@@ -106,18 +115,47 @@ export default function InvoicesPage() {
     const file = event.target.files[0];
     if (!file) return;
     try {
-      await uploadFile(file);
+      const response = await uploadFile(file);
       Swal.fire({
         title: 'Success',
         text: 'Invoice uploaded successfully!',
         icon: 'success',
       });
+      // Check if there are missing fields in the response
+      if (response.missingFields && response.missingFields.length > 0) {
+        setMissingFields(response.missingFields);
+        setInvoiceIdToUpdate(response.invoiceId);
+        setModalOpen(true);
+      }
       fetchInvoices();
     } catch (error) {
       console.error('Upload failed:', error);
       Swal.fire({
         title: 'Error',
         text: 'Upload failed. Please try again.',
+        icon: 'error',
+      });
+    }
+  };
+
+  // Handler for missing info modal submission
+  const handleMissingInfoSubmit = async (filledData) => {
+    try {
+      // Call an API to update the invoice with the missing details.
+      // For example, if you have an endpoint updateInvoiceDetails(invoiceId, data)
+      await updateInvoice(invoiceIdToUpdate, filledData);
+      Swal.fire({
+        title: 'Success',
+        text: 'Invoice updated successfully!',
+        icon: 'success',
+      });
+      setModalOpen(false);
+      fetchInvoices();
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to update invoice. Please try again.',
         icon: 'error',
       });
     }
@@ -288,6 +326,14 @@ export default function InvoicesPage() {
         expenses={expenses}
         onDeleteExpense={handleDeleteExpense}
         onUpdateExpense={handleUpdateExpense}
+      />
+
+      {/* Missing Info Modal for any fields Textract could not auto-detect */}
+      <MissingInfoModal
+        open={modalOpen}
+        missingFields={missingFields}
+        onSubmit={handleMissingInfoSubmit}
+        onClose={() => setModalOpen(false)}
       />
     </Box>
   );

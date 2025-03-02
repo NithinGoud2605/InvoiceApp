@@ -91,7 +91,7 @@ router.get('/audit-logs', requireAuth, auditLogController.getAuditLogs);
 
 // Protected File Upload Route
 
-router.post('/uploads', requireAuth, uploadController.upload, uploadController.uploadInvoice);
+router.post('/invoices/upload', requireAuth, uploadController.upload, uploadController.uploadInvoice);
 
 // Public Webhook Route (or protect it based on your design)
 router.post('/webhooks', webhookController.handleWebhook);

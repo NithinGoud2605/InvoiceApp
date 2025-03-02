@@ -79,11 +79,9 @@ export const getInvoicePdf = async (invoiceId) => {
 };
 
 /* ------------- EXPENSE ROUTES ------------- */
-// Existing expense endpoints from your backend routes:
 export const getAllExpenses = () => apiRequest('get', '/expenses');
 export const getExpenseTotal = () => apiRequest('get', '/expenses/total');
 export const getAggregatedExpenses = () => apiRequest('get', '/expenses/aggregated');
-// New endpoints to create and update expenses:
 export const createExpense = (expenseData) => apiRequest('post', '/expenses', expenseData);
 export const updateExpense = (expenseId, expenseData) =>
   apiRequest('put', `/expenses/${expenseId}`, expenseData);
@@ -107,7 +105,7 @@ export const updateMe = (userData) => apiRequest('put', '/users/me', userData);
 export const uploadFile = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  return apiRequest('post', '/uploads', formData, {
+  return apiRequest('post', '/invoices/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
