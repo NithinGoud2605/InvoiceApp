@@ -21,6 +21,8 @@ exports.getClients = async (req, res) => {
  */
 exports.createClient = async (req, res) => {
   try {
+    console.log("req.user:", req.user);
+    console.log("Request body:", req.body);
     const userId = req.user.sub || req.user.id;
     const { name, email, phone, address } = req.body;
     if (!name) {
@@ -29,8 +31,8 @@ exports.createClient = async (req, res) => {
     const client = await Client.create({ userId, name, email, phone, address });
     return res.status(201).json(client);
   } catch (error) {
-    console.error("Error creating client:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error creating client:", error.message, error.stack);
+    return res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
