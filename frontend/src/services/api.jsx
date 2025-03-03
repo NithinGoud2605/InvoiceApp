@@ -21,21 +21,24 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ❌ Global Error Handling
+// In your services/api.js file
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('❌ API Error:', error.response?.data || error.message);
-
+    
     if (error.response?.status === 401) {
-      console.warn('⚠️ Unauthorized! Redirecting to login...');
-      localStorage.removeItem('token');
-      window.location.href = '/sign-in';
+      console.warn('⚠️ Unauthorized! Please sign in.');
+      // Optionally remove the token if you want:
+      // localStorage.removeItem('token');
+      // Do NOT redirect automatically:
+      // window.location.href = '/sign-in';
     }
-
+    
     return Promise.reject(error.response?.data || error);
   }
 );
+
 
 // 🔄 Helper Function for Requests
 const apiRequest = async (method, url, data = null, config = {}) => {

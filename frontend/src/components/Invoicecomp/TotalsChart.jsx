@@ -4,6 +4,7 @@ import {
   FormControl, InputLabel, Select, MenuItem, Button 
 } from '@mui/material';
 import { Line, Bar } from 'react-chartjs-2';
+import Swal from 'sweetalert2';
 import 'chart.js/auto';
 
 const TotalsChart = ({
@@ -174,6 +175,46 @@ const TotalsChart = ({
       },
     },
   };
+// Add this helper function at the top of your component (or outside TotalsChart)
+const formatLocalDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  // Adjust for the timezone offset in milliseconds
+  const offset = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - offset);
+  return localDate.toISOString().split('T')[0];
+};
+
+  // New function to prompt for update values using SweetAlert2
+  const handleUpdateExpenseClick = (expense) => {
+    // Use formatLocalDate to get the correct local date
+    const formattedDate = formatLocalDate(expense.date);
+    
+    Swal.fire({
+      title: 'Update Expense',
+      html: `
+        <input id="swal-input1" class="swal2-input" placeholder="Amount" type="number" value="${expense.amount}">
+        <input id="swal-input2" class="swal2-input" placeholder="Date" type="date" value="${formattedDate}">
+        <input id="swal-input3" class="swal2-input" placeholder="Category" type="text" value="${expense.category || ''}">
+        <input id="swal-input4" class="swal2-input" placeholder="Description" type="text" value="${expense.description || ''}">
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        return {
+          amount: document.getElementById('swal-input1').value,
+          date: document.getElementById('swal-input2').value,
+          category: document.getElementById('swal-input3').value,
+          description: document.getElementById('swal-input4').value,
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Merge updated values with the original expense
+        onUpdateExpense({ ...expense, ...result.value });
+      }
+    });
+  };
+  
 
   return (
     <Box sx={{ p: 3 }}>
@@ -248,12 +289,13 @@ const TotalsChart = ({
             <CardContent>
               <Typography variant="h6" gutterBottom>Totals</Typography>
               <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography>Total Invoices:</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography>{formatCurrency(filteredTotalInvoices)}</Typography>
-                </Grid>
+              <Grid item xs={6}>
+  <Typography>Total Invoices:</Typography>
+</Grid>
+<Grid item xs={6} sx={{ textAlign: 'right' }}>
+  <Typography>{formatCurrency(filteredTotalInvoices)}</Typography>
+</Grid>
+
                 <Grid item xs={6}>
                   <Typography>Total Expenses:</Typography>
                 </Grid>
@@ -323,7 +365,7 @@ const TotalsChart = ({
                         <Typography>{formatCurrency(exp.amount)}</Typography>
                       </Grid>
                       <Grid item xs={2}>
-                        <Typography>{new Date(exp.date).toLocaleDateString()}</Typography>
+                        <Typography>{exp.date}</Typography>
                       </Grid>
                       <Grid item xs={3}>
                         <Typography>{exp.category}</Typography>
@@ -336,7 +378,7 @@ const TotalsChart = ({
                           variant="contained" 
                           color="warning" 
                           size="small"
-                          onClick={() => onUpdateExpense && onUpdateExpense(exp)}
+                          onClick={() => handleUpdateExpenseClick(exp)}
                         >
                           Update
                         </Button>

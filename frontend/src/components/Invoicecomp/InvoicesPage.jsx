@@ -51,21 +51,33 @@ export default function InvoicesPage() {
   } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
-      const data = await getAllInvoices();
-      return Promise.all(
-        data.invoices
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-          .slice(0, 10)
-          .map(async (invoice) => {
-            const pdfData = await getInvoicePdf(invoice.id);
-            return { ...invoice, pdfUrl: pdfData.url };
-          })
-      );
+      try {
+        const data = await getAllInvoices();
+        return Promise.all(
+          data.invoices
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 10)
+            .map(async (invoice) => {
+              const pdfData = await getInvoicePdf(invoice.id);
+              return { ...invoice, pdfUrl: pdfData.url };
+            })
+        );
+      } catch (error) {
+        if (error && error.error === 'Unauthorized') {
+          navigate('/sign-in');
+        }
+        throw error;
+      }
     },
   });
+  
 
   // Fetch expenses using the object-based API
-  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+  const {
+    data: expensesData,
+    isLoading: expensesLoading,
+    refetch: refetchExpenses,
+  } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
       const expenseData = await getAllExpenses();
@@ -148,6 +160,25 @@ export default function InvoicesPage() {
     setIsUploading(false);
   };
 
+  const handleExpenseSubmit = async (expenseData) => {
+    try {
+      await createExpense(expenseData);
+      refetchExpenses();
+      Swal.fire({
+        title: 'Success',
+        text: 'Expense added successfully!',
+        icon: 'success',
+      });
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to add expense. Please try again.',
+        icon: 'error',
+      });
+    }
+  };
+  
   const handleMissingInfoSubmit = async (filledData) => {
     try {
       let updateData = {
@@ -253,6 +284,35 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleExpenseDelete = async (expenseId) => {
+    try {
+      await deleteExpense(expenseId);
+      refetchExpenses();
+    } catch (error) {
+      console.error('Failed to delete expense:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to delete expense. Please try again.',
+        icon: 'error',
+      });
+    }
+  };
+
+  const handleExpenseUpdate = async (expense) => {
+    try {
+      await updateExpense(expense.id, expense);
+      refetchExpenses();
+    } catch (error) {
+      console.error('Failed to update expense:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to update expense. Please try again.',
+        icon: 'error',
+      });
+    }
+  };
+
+
   // Render a loading state if any query is still in progress
   if (isLoading) {
     return (
@@ -272,8 +332,11 @@ export default function InvoicesPage() {
           <ExpensesLineChart data={chartData} />
         </Grid>
         <Grid item xs={12}>
-          <ActionButtons onFileUpload={handleFileUpload} onExpenseSubmit={() => {}} />
-        </Grid>
+  <ActionButtons 
+    onFileUpload={handleFileUpload} 
+    onExpenseSubmit={handleExpenseSubmit}    // Updated here
+  />
+</Grid>
       </Grid>
 
       <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.light', borderRadius: '8px' }}>
@@ -289,13 +352,13 @@ export default function InvoicesPage() {
         onDelete={handleDelete}
       />
 
-      <TotalsChart
+<TotalsChart
         totals={totals}
         chartData={chartData}
         formatCurrency={formatCurrency}
         expenses={expenses}
-        onDeleteExpense={() => {}}
-        onUpdateExpense={() => {}}
+        onDeleteExpense={handleExpenseDelete}    // Updated here
+        onUpdateExpense={handleExpenseUpdate}      // Updated here
       />
 
       <MissingInfoModal
