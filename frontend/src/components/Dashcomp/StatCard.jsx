@@ -1,4 +1,3 @@
-// src/components/Dashcomp/StatCard.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Card, CardContent, Chip, Typography, Box, Stack } from '@mui/material';
@@ -6,7 +5,7 @@ import { SparkLineChart } from '@mui/x-charts/SparkLineChart';
 import { areaElementClasses } from '@mui/x-charts/LineChart';
 import { useTheme } from '@mui/material/styles';
 
-export default function StatCard({ title, value, interval, trend, data }) {
+export default function StatCard({ title, value, interval, trend, trendLabel, data }) {
   const theme = useTheme();
 
   const trendColors = {
@@ -15,12 +14,6 @@ export default function StatCard({ title, value, interval, trend, data }) {
     neutral: theme.palette.grey[500],
   };
   const color = trendColors[trend] || trendColors.neutral;
-
-  const trendText = {
-    up: '+25%',
-    down: '-25%',
-    neutral: '+5%',
-  };
 
   return (
     <Card variant="outlined" sx={{ height: '100%', flexGrow: 1 }}>
@@ -33,7 +26,7 @@ export default function StatCard({ title, value, interval, trend, data }) {
             <Typography variant="h4">{value}</Typography>
             <Chip
               size="small"
-              label={trendText[trend]}
+              label={trendLabel} // Use dynamic percentage change
               sx={{
                 bgcolor: color,
                 color: '#fff',
@@ -70,5 +63,6 @@ StatCard.propTypes = {
   value: PropTypes.string.isRequired,
   interval: PropTypes.string.isRequired,
   trend: PropTypes.oneOf(['up', 'down', 'neutral']).isRequired,
+  trendLabel: PropTypes.string.isRequired, // New prop for dynamic percentage
   data: PropTypes.arrayOf(PropTypes.number).isRequired,
 };

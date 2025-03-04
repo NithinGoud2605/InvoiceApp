@@ -1,6 +1,5 @@
-// controllers/invoiceController.js
 const { Invoice } = require('../models');
-const {  deleteFromS3,getPreSignedUrl } = require('../utils/s3Uploader');
+const { deleteFromS3, getPreSignedUrl } = require('../utils/s3Uploader');
 const sequelize = require('sequelize');
 
 // GET /api/invoices - Fetch all invoices
@@ -25,12 +24,12 @@ exports.getAllInvoices = async (req, res) => {
 // POST /api/invoices
 exports.createInvoice = async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from req.user.sub
+    const userId = req.user.id;
     const { totalAmount, dueDate, status } = req.body;
 
     const newInvoice = await Invoice.create({
       userId,
-      totalAmount, // Changed from amount to match model
+      totalAmount,
       dueDate,
       status: status || 'DRAFT',
     });
@@ -45,7 +44,7 @@ exports.createInvoice = async (req, res) => {
 // GET /api/invoices/:id
 exports.getInvoiceById = async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from req.user.sub
+    const userId = req.user.id;
     const { id } = req.params;
 
     const invoice = await Invoice.findOne({ where: { id, userId } });
@@ -60,12 +59,10 @@ exports.getInvoiceById = async (req, res) => {
 };
 
 // PUT /api/invoices/:id
-// controllers/invoiceController.js
 exports.updateInvoice = async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
     const { id } = req.params;
-    // Expect "amount", "dueDate", "status", "clientId" in the request body.
     const { amount, dueDate, status, clientId } = req.body;
 
     const invoice = await Invoice.findOne({ where: { id, userId } });
@@ -86,17 +83,12 @@ exports.updateInvoice = async (req, res) => {
   }
 };
 
-
-
-
-
-
 // GET /api/invoices/overview
 exports.getOverview = async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from req.user.sub
+    const userId = req.user.id;
 
-    const totalAmount = await Invoice.sum('totalAmount', { where: { userId } }) || 0; // Changed from amount, default to 0 if null
+    const totalAmount = await Invoice.sum('totalAmount', { where: { userId } }) || 0;
     const invoiceCountsByStatus = await Invoice.findAll({
       where: { userId },
       attributes: [
@@ -104,7 +96,7 @@ exports.getOverview = async (req, res) => {
         [sequelize.fn('COUNT', sequelize.col('status')), 'count']
       ],
       group: ['status'],
-      raw: true // Simplifies output
+      raw: true
     }) || [];
 
     return res.json({ totalAmount, invoiceCountsByStatus });
@@ -144,7 +136,7 @@ exports.getAggregatedInvoices = async (req, res) => {
 // POST /api/invoices/:id/send (Placeholder)
 exports.sendInvoice = async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from req.user.sub
+    const userId = req.user.id;
     const { id } = req.params;
 
     const invoice = await Invoice.findOne({ where: { id, userId } });
@@ -168,7 +160,7 @@ exports.sendInvoice = async (req, res) => {
 // GET /api/invoices/report (Placeholder)
 exports.report = async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from req.user.sub
+    const userId = req.user.id;
     return res.json({ report: {} }); // Placeholder
   } catch (error) {
     console.error('Error generating report:', error);
@@ -201,31 +193,26 @@ exports.getInvoicePdf = async (req, res) => {
   }
 };
 
-
-// Note: Removed duplicate getInvoicePdf function
+// DELETE /api/invoices/:id
 exports.deleteInvoice = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    
-    // Find the invoice belonging to this user
+
     const invoice = await Invoice.findOne({ where: { id, userId } });
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
     }
-    
-    // If a PDF exists, attempt to delete it from S3
+
     if (invoice.pdfUrl) {
       try {
         await deleteFromS3(invoice.pdfUrl);
         console.log(`Deleted file from S3: ${invoice.pdfUrl}`);
       } catch (err) {
         console.error('Error deleting file from S3:', err);
-        // Optionally, you can return an error here if S3 deletion is critical.
       }
     }
-    
-    // Delete the invoice record from the database
+
     await invoice.destroy();
     return res.json({ message: `Invoice ${id} deleted successfully` });
   } catch (error) {
