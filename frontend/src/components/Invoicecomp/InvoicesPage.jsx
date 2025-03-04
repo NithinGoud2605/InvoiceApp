@@ -3,12 +3,13 @@ import { Box, Typography, Grid, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useQuery } from '@tanstack/react-query';
+
+// Import your API methods
 import {
   getAllInvoices,
   getInvoicePdf,
   deleteInvoice,
   uploadFile,
-  getInvoiceOverview,
   createExpense,
   getAllExpenses,
   deleteExpense,
@@ -16,8 +17,10 @@ import {
   updateInvoice,
   getAllClients,
   createClient,
+  getInvoiceOverview,
 } from '../../services/api';
 
+// Import your UI components
 import ActionButtons from './ActionButtons';
 import RecentInvoices from './RecentInvoices';
 import TotalsChart from './TotalsChart';
@@ -25,35 +28,96 @@ import MissingInfoModal from './MissingInfoModal';
 import EditInvoiceModal from './EditInvoiceModal';
 import StatCard from '../../components/Dashcomp/StatCard';
 
-// Helper functions
-const getMonthRange = (year, month) => {
-  const start = new Date(Date.UTC(year, month, 1));
-  const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
-  return { start, end };
-};
+//
+// ──────────────────────────────────────────────────────────────
+//   HELPER FUNCTIONS
+// ──────────────────────────────────────────────────────────────
+//
 
-const calculatePercentageChange = (current, previous) => {
+/**
+ * Returns the start and end Date objects for a given year + zero-based month in UTC.
+ * Example: getMonthRange(2025, 0) => Jan 1, 2025 00:00 UTC to Jan 31, 2025 23:59 UTC.
+ */
+function getMonthRange(year, month) {
+  const adjustedDate = new Date(Date.UTC(year, month, 1));
+  const realYear = adjustedDate.getUTCFullYear();
+  const realMonth = adjustedDate.getUTCMonth();
+
+  const start = new Date(Date.UTC(realYear, realMonth, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(realYear, realMonth + 1, 0, 23, 59, 59, 999));
+
+  return { start, end };
+}
+
+/** Simple helper: DRAFT or SENT = "active" */
+const isActiveInvoice = (inv) => ['DRAFT', 'SENT'].includes(inv.status);
+
+/** Returns a numeric percentage difference between two values (from 'previous' to 'current'). */
+function calculatePercentageChange(current, previous) {
   if (previous === 0) {
-    return current === 0 ? 0 : Infinity;
+    return current === 0 ? 0 : Infinity; 
   }
   const change = ((current - previous) / previous) * 100;
   return Number.isFinite(change) ? change : 0;
-};
+}
 
-const getInvoicesInMonth = (invoices, start, end) => {
-  return invoices.filter((invoice) => {
-    const createdAt = new Date(invoice.created_at);
-    return createdAt >= start && createdAt <= end;
+/**
+ * Filters invoices to just those created in the specified year/month,
+ * then returns the "aggregated" metric: e.g., count of "active" or total amount, etc.
+ */
+function getInvoicesMetricForMonth(invoices, year, month, metric) {
+  const { start, end } = getMonthRange(year, month);
+
+  // Debugging: Log the range and invoices being checked
+  console.log(`Filtering for ${year}-${month + 1}: Start ${start}, End ${end}`);
+  
+  const monthlyInvoices = invoices.filter((inv) => {
+    const createdAt = new Date(inv.createdAt);
+    const isMatch = createdAt >= start && createdAt <= end;
+    console.log(`Invoice ${inv.id}: created_at=${inv.created_at}, parsed=${createdAt}, matches=${isMatch}`);
+    return isMatch;
   });
-};
 
-const getActiveInvoices = (invoices, asOfDate) => {
-  return invoices.filter((invoice) => new Date(invoice.dueDate) >= asOfDate);
-};
+  console.log(`Found ${monthlyInvoices.length} invoices for ${year}-${month + 1}`);
 
-const getExpiredInvoices = (invoices, asOfDate) => {
-  return invoices.filter((invoice) => new Date(invoice.dueDate) < asOfDate);
-};
+  switch (metric) {
+    case 'ACTIVE_COUNT':
+      return monthlyInvoices.filter(isActiveInvoice).length;
+
+    case 'AMOUNT_SUM':
+      return monthlyInvoices.reduce(
+        (sum, inv) => sum + parseFloat(inv.totalAmount || 0),
+        0
+      );
+
+    case 'COUNT_ALL':
+      return monthlyInvoices.length;
+
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Builds a 4-element sparkline array for the "last 4 months" inclusive of the current month.
+ * E.g. offsets = [-3, -2, -1, 0].
+ */
+function buildLast4MonthsSparkLine(invoices, metric) {
+  const now = new Date();
+  const baseYear = now.getUTCFullYear();
+  const baseMonth = now.getUTCMonth();
+
+  const monthOffsets = [-3, -2, -1, 0];
+
+  const values = monthOffsets.map((offset) => {
+    const target = new Date(Date.UTC(baseYear, baseMonth + offset, 1));
+    const year = target.getUTCFullYear();
+    const month = target.getUTCMonth();
+    return getInvoicesMetricForMonth(invoices, year, month, metric);
+  });
+
+  return values;
+}
 
 export default function InvoicesPage() {
   const navigate = useNavigate();
@@ -64,7 +128,11 @@ export default function InvoicesPage() {
       currency: 'USD',
     }).format(amount);
 
-  // Fetch all invoices and recent invoices
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   1) FETCH QUERIES
+  // ──────────────────────────────────────────────────────────────
+  //
   const {
     data: invoicesQueryData,
     isLoading: invoicesLoading,
@@ -75,6 +143,10 @@ export default function InvoicesPage() {
       try {
         const data = await getAllInvoices();
         const allInvoices = data.invoices;
+
+        // Debugging: Log all invoices to check data
+        console.log('Fetched All Invoices:', allInvoices);
+
         const recentInvoices = await Promise.all(
           allInvoices
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -94,7 +166,6 @@ export default function InvoicesPage() {
     },
   });
 
-  // Fetch expenses
   const {
     data: expensesData,
     isLoading: expensesLoading,
@@ -107,17 +178,10 @@ export default function InvoicesPage() {
     },
   });
 
-  // Fetch invoice overview (totals)
-  const { data: overviewData, isLoading: overviewLoading } = useQuery({
-    queryKey: ['overview'],
-    queryFn: async () => {
-      const overview = await getInvoiceOverview();
-      return overview;
-    },
-  });
-
-  // Fetch clients
-  const { data: clientsData, isLoading: clientsLoading } = useQuery({
+  const {
+    data: clientsData,
+    isLoading: clientsLoading,
+  } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const clientData = await getAllClients();
@@ -125,15 +189,26 @@ export default function InvoicesPage() {
     },
   });
 
-  // Default values if data hasn't loaded
+  const {
+    data: overviewData,
+    isLoading: overviewLoading,
+  } = useQuery({
+    queryKey: ['overview'],
+    queryFn: getInvoiceOverview,
+  });
+
+  const isLoading = invoicesLoading || expensesLoading || clientsLoading || overviewLoading;
+
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   2) INVOICES & ENRICHED DATA
+  // ──────────────────────────────────────────────────────────────
+  //
   const allInvoices = invoicesQueryData?.allInvoices || [];
   const recentInvoices = invoicesQueryData?.recentInvoices || [];
   const expenses = expensesData || [];
   const existingClients = clientsData || [];
 
-  const isLoading = invoicesLoading || expensesLoading || overviewLoading || clientsLoading;
-
-  // Enrich recent invoices with client names
   const enrichedInvoices = React.useMemo(() => {
     return recentInvoices.map((invoice) => {
       if (invoice.clientId && !invoice.clientName && existingClients.length > 0) {
@@ -144,62 +219,49 @@ export default function InvoicesPage() {
     });
   }, [recentInvoices, existingClients]);
 
-  // Date calculations for this month and last month (as of March 4, 2025, 03:39 AM PST)
-  const currentDate = new Date('2025-03-04T11:39:00Z'); // UTC equivalent of 03:39 AM PST
-  const thisYear = currentDate.getUTCFullYear(); // 2025
-  const thisMonth = currentDate.getUTCMonth(); // 2 (March)
-  const { start: thisMonthStart, end: thisMonthEnd } = getMonthRange(thisYear, thisMonth);
-  const { start: lastMonthStart, end: lastMonthEnd } = getMonthRange(thisYear, thisMonth - 1);
-  const nextMonthStart = new Date(Date.UTC(thisYear, thisMonth + 1, 1));
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   3) LAST 4 MONTHS SPARKLINES
+  // ──────────────────────────────────────────────────────────────
+  //
+  const activeSparkData = buildLast4MonthsSparkLine(allInvoices, 'ACTIVE_COUNT');
+  const amountSparkData = buildLast4MonthsSparkLine(allInvoices, 'AMOUNT_SUM');
+  const countSparkData = buildLast4MonthsSparkLine(allInvoices, 'COUNT_ALL');
 
-  // Calculate statistics for this month and last month
-  const thisMonthActive = getActiveInvoices(allInvoices, nextMonthStart).length;
-  const lastMonthActive = getActiveInvoices(allInvoices, thisMonthStart).length;
-  const thisMonthExpired = getExpiredInvoices(allInvoices, nextMonthStart).length;
-  const lastMonthExpired = getExpiredInvoices(allInvoices, thisMonthStart).length;
+  const activeFinal = activeSparkData[3]; 
+  const amountFinal = amountSparkData[3]; 
+  const countFinal = countSparkData[3]; 
 
-  const thisMonthInvoices = getInvoicesInMonth(allInvoices, thisMonthStart, thisMonthEnd);
-  const lastMonthInvoices = getInvoicesInMonth(allInvoices, lastMonthStart, lastMonthEnd);
-  const thisMonthValue = thisMonthInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-  const lastMonthValue = lastMonthInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-  const thisMonthTotal = thisMonthInvoices.length;
-  const lastMonthTotal = lastMonthInvoices.length;
+  const activeInitial = activeSparkData[0];
+  const amountInitial = amountSparkData[0];
+  const countInitial = countSparkData[0];
 
-  // Calculate percentage changes and trends
-  const activeChange = calculatePercentageChange(thisMonthActive, lastMonthActive);
-  const expiredChange = calculatePercentageChange(thisMonthExpired, lastMonthExpired);
-  const valueChange = calculatePercentageChange(thisMonthValue, lastMonthValue);
-  const totalChange = calculatePercentageChange(thisMonthTotal, lastMonthTotal);
+  const activeChange = calculatePercentageChange(activeFinal, activeInitial);
+  const amountChange = calculatePercentageChange(amountFinal, amountInitial);
+  const countChange = calculatePercentageChange(countFinal, countInitial);
 
   const activeTrend = activeChange > 0 ? 'up' : activeChange < 0 ? 'down' : 'neutral';
-  const expiredTrend = expiredChange > 0 ? 'up' : expiredChange < 0 ? 'down' : 'neutral';
-  const valueTrend = valueChange > 0 ? 'up' : valueChange < 0 ? 'down' : 'neutral';
-  const totalTrend = totalChange > 0 ? 'up' : totalChange < 0 ? 'down' : 'neutral';
+  const amountTrend = amountChange > 0 ? 'up' : amountChange < 0 ? 'down' : 'neutral';
+  const countTrend = countChange > 0 ? 'up' : countChange < 0 ? 'down' : 'neutral';
 
   const activeTrendLabel =
     activeChange === Infinity
       ? '∞% ↑'
       : `${activeChange.toFixed(2)}% ${activeChange > 0 ? '↑' : activeChange < 0 ? '↓' : ''}`;
-  const expiredTrendLabel =
-    expiredChange === Infinity
+  const amountTrendLabel =
+    amountChange === Infinity
       ? '∞% ↑'
-      : `${expiredChange.toFixed(2)}% ${expiredChange > 0 ? '↑' : expiredChange < 0 ? '↓' : ''}`;
-  const valueTrendLabel =
-    valueChange === Infinity
+      : `${amountChange.toFixed(2)}% ${amountChange > 0 ? '↑' : amountChange < 0 ? '↓' : ''}`;
+  const countTrendLabel =
+    countChange === Infinity
       ? '∞% ↑'
-      : `${valueChange.toFixed(2)}% ${valueChange > 0 ? '↑' : valueChange < 0 ? '↓' : ''}`;
-  const totalTrendLabel =
-    totalChange === Infinity
-      ? '∞% ↑'
-      : `${totalChange.toFixed(2)}% ${totalChange > 0 ? '↑' : totalChange < 0 ? '↓' : ''}`;
+      : `${countChange.toFixed(2)}% ${countChange > 0 ? '↑' : countChange < 0 ? '↓' : ''}`;
 
-  // Sparkline data (last month vs this month)
-  const activeSparkData = [lastMonthActive, thisMonthActive];
-  const expiredSparkData = [lastMonthExpired, thisMonthExpired];
-  const valueSparkData = [lastMonthValue, thisMonthValue];
-  const totalSparkData = [lastMonthTotal, thisMonthTotal];
-
-  // Local component states
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   4) LOCAL STATES & HANDLERS
+  // ──────────────────────────────────────────────────────────────
+  //
   const [missingFields, setMissingFields] = React.useState([]);
   const [invoiceIdToUpdate, setInvoiceIdToUpdate] = React.useState(null);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -207,11 +269,11 @@ export default function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = React.useState(null);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  // Event handlers
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     setIsUploading(true);
+
     try {
       const response = await uploadFile(file);
       Swal.fire({
@@ -219,11 +281,13 @@ export default function InvoicesPage() {
         text: 'Invoice uploaded successfully!',
         icon: 'success',
       });
+
       if (response.missingFields?.length > 0) {
         setMissingFields(response.missingFields);
         setInvoiceIdToUpdate(response.invoiceId);
         setModalOpen(true);
       }
+
       refetchInvoices();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -233,6 +297,7 @@ export default function InvoicesPage() {
         icon: 'error',
       });
     }
+
     setIsUploading(false);
   };
 
@@ -257,7 +322,7 @@ export default function InvoicesPage() {
 
   const handleMissingInfoSubmit = async (filledData) => {
     try {
-      let updateData = {
+      const updateData = {
         ...(filledData.totalAmount && { amount: filledData.totalAmount }),
         ...(filledData.dueDate && { dueDate: filledData.dueDate }),
       };
@@ -297,7 +362,7 @@ export default function InvoicesPage() {
 
   const handleEditSubmit = async (updatedData) => {
     try {
-      let invoiceData = {
+      const invoiceData = {
         amount: updatedData.totalAmount,
         dueDate: updatedData.dueDate,
       };
@@ -337,6 +402,7 @@ export default function InvoicesPage() {
         confirmButtonText: 'Yes, delete it!',
       });
       if (!isConfirmed) return;
+
       await deleteInvoice(id);
       refetchInvoices();
       Swal.fire({
@@ -382,6 +448,11 @@ export default function InvoicesPage() {
     }
   };
 
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   5) LOADING STATE
+  // ──────────────────────────────────────────────────────────────
+  //
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -390,53 +461,51 @@ export default function InvoicesPage() {
     );
   }
 
+  // Debugging: Log sparkline data
+  console.log('Active Spark Data:', activeSparkData);
+  console.log('Amount Spark Data:', amountSparkData);
+  console.log('Count Spark Data:', countSparkData);
+
+  //
+  // ──────────────────────────────────────────────────────────────
+  //   6) RENDER
+  // ──────────────────────────────────────────────────────────────
+  //
   return (
     <Box sx={{ p: 2 }}>
-      {/* Stat Cards Row */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={4}>
           <StatCard
-            title="Active Invoices"
-            value={String(thisMonthActive)}
-            interval="This Month"
+            title="Active Invoices (4-mo)"
+            value={String(activeFinal)}
+            interval="Last 4 months"
             trend={activeTrend}
             trendLabel={activeTrendLabel}
             data={activeSparkData}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={4}>
           <StatCard
-            title="Expired Invoices"
-            value={String(thisMonthExpired)}
-            interval="This Month"
-            trend={expiredTrend}
-            trendLabel={expiredTrendLabel}
-            data={expiredSparkData}
+            title="Invoices Total (4-mo)"
+            value={formatCurrency(amountFinal)}
+            interval="Last 4 months"
+            trend={amountTrend}
+            trendLabel={amountTrendLabel}
+            data={amountSparkData}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={4}>
           <StatCard
-            title="Total Value This Month"
-            value={formatCurrency(thisMonthValue)}
-            interval="This Month"
-            trend={valueTrend}
-            trendLabel={valueTrendLabel}
-            data={valueSparkData}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Invoices This Month"
-            value={String(thisMonthTotal)}
-            interval="This Month"
-            trend={totalTrend}
-            trendLabel={totalTrendLabel}
-            data={totalSparkData}
+            title="Total Invoices (4-mo)"
+            value={String(countFinal)}
+            interval="Last 4 months"
+            trend={countTrend}
+            trendLabel={countTrendLabel}
+            data={countSparkData}
           />
         </Grid>
       </Grid>
 
-      {/* Action Buttons */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12}>
           <ActionButtons
@@ -446,13 +515,11 @@ export default function InvoicesPage() {
         </Grid>
       </Grid>
 
-      {/* Recent Invoices Section */}
       <Box sx={{ mb: 1, p: 1, borderRadius: '8px' }}>
         <Typography variant="h5" align="center">
           Recent Invoices
         </Typography>
       </Box>
-
       <RecentInvoices
         invoices={enrichedInvoices}
         formatCurrency={formatCurrency}

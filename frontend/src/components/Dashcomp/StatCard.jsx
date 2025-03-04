@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 export default function StatCard({ title, value, interval, trend, trendLabel, data }) {
   const theme = useTheme();
 
+  // Trend colors for up, down, or neutral changes
   const trendColors = {
     up: theme.palette.success.main,
     down: theme.palette.error.main,
@@ -26,7 +27,7 @@ export default function StatCard({ title, value, interval, trend, trendLabel, da
             <Typography variant="h4">{value}</Typography>
             <Chip
               size="small"
-              label={trendLabel} // Use dynamic percentage change
+              label={trendLabel} 
               sx={{
                 bgcolor: color,
                 color: '#fff',
@@ -63,6 +64,6 @@ StatCard.propTypes = {
   value: PropTypes.string.isRequired,
   interval: PropTypes.string.isRequired,
   trend: PropTypes.oneOf(['up', 'down', 'neutral']).isRequired,
-  trendLabel: PropTypes.string.isRequired, // New prop for dynamic percentage
+  trendLabel: PropTypes.string.isRequired,
   data: PropTypes.arrayOf(PropTypes.number).isRequired,
 };
