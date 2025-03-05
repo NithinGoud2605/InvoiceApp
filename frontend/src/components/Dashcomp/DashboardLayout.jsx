@@ -1,9 +1,8 @@
-// src/components/Dashcomp/DashboardLayout.jsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Box } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
-import Sidebar from './Sidebar';        // permanent on md+
+import Sidebar from './Sidebar';        // permanent on md+ screens
 import Header from './Header';         // universal top bar
 
 export default function DashboardLayout() {

@@ -82,7 +82,7 @@ module.exports = {
   Client,
   Contract,
   InvoiceLineItem,
-  defineAssociations
+  defineAssociations,
 };
 
 // Call associations after export

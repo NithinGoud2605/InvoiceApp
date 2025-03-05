@@ -21,18 +21,21 @@ function App() {
         <UserProvider>
           <Router>
             {/* Wrap your Routes with Suspense so that lazy components show a fallback while loading */}
-            <Suspense fallback={
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                <CircularProgress />
-                <p>Loading...</p>
-              </div>
-            }>
+            <Suspense
+              fallback={
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                  <CircularProgress />
+                  <p>Loading...</p>
+                </div>
+              }
+            >
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/sign-in" element={<SignIn />} />
                 <Route path="/sign-up" element={<SignUp />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/pricing" element={<Pricing />} />
+
                 {/* Protected Dashboard is lazy-loaded */}
                 <Route
                   path="/dashboard/*"
@@ -42,6 +45,7 @@ function App() {
                     </PrivateRoute>
                   }
                 />
+
                 {/* Redirect unknown paths */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

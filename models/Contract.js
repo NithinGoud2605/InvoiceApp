@@ -44,6 +44,11 @@ module.exports = (sequelize) => {
     externalSubscriptionId: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    // Add the pdfUrl field here:
+    pdfUrl: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     tableName: 'contracts',

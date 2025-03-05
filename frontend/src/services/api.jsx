@@ -71,6 +71,45 @@ export const getInvoicePdf = async (invoiceId) => {
   }
 };
 
+/* ------------- CONTRACT ROUTES ------------- */
+export const getAllContracts = () => apiRequest('get', '/contracts');
+
+export const uploadContract = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient
+    .post('/contracts/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then(response => response.data);
+};
+
+export const createContract = (data) => apiRequest('post', '/contracts', data);
+
+export const updateContract = (contractId, data) =>
+  apiRequest('put', `/contracts/${contractId}`, data);
+
+export const cancelContract = (contractId) =>
+  apiRequest('post', `/contracts/${contractId}/cancel`);
+
+export const renewContract = (contractId, body) =>
+  apiRequest('post', `/contracts/${contractId}/renew`, body);
+
+export const sendForSignature = (contractId) =>
+  apiRequest('post', `/contracts/${contractId}/send-for-signature`);
+
+/* ------------- CONTRACT PDF ROUTE ------------- */
+export const getContractPdf = async (contractId) => {
+  try {
+    const response = await apiClient.get(`/contracts/${contractId}/pdf`);
+    console.log("✅ Pre-Signed URL Received:", response.data.url);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching PDF:", error);
+    throw error;
+  }
+};
+
 /* ------------- EXPENSE ROUTES ------------- */
 export const getAllExpenses = () => apiRequest('get', '/expenses');
 export const getExpenseTotal = () => apiRequest('get', '/expenses/total');
