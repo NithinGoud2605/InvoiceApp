@@ -72,7 +72,7 @@ router.post('/contracts/:id/send-for-signature', requireAuth, contractController
 router.post('/contracts/upload', requireAuth, contractController.upload, contractController.uploadContract);
 // Protected Contract Routes
 router.get('/contracts/:id/pdf', requireAuth, contractController.getContractPdf);
-
+router.delete('/contracts/:id', requireAuth, contractController.deleteContract);
 
 
 // **Protected Client Routes**

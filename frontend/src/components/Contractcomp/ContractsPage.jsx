@@ -245,34 +245,37 @@ export default function ContractsPage() {
       });
     }
   };
+// In your ContractsPage.jsx component
+const handleCancel = async (id) => {
+  try {
+    const result = await Swal.fire({
+      title: 'Cancel Contract?',
+      text: 'This will set the contract status to CANCELLED.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, cancel it!',
+    });
+    if (!result.isConfirmed) return;
+    
+    const response = await cancelContract(id);
+    console.log('Cancel response:', response);
+    refetchContracts();
+    await Swal.fire({
+      title: 'Success',
+      text: 'Contract cancelled.',
+      icon: 'success',
+    });
+  } catch (error) {
+    console.error('Error cancelling contract:', error);
+    Swal.fire({
+      title: 'Error',
+      text: 'Failed to cancel contract.',
+      icon: 'error',
+    });
+  }
+};
 
-  const handleCancel = async (id) => {
-    try {
-      const { isConfirmed } = await Swal.fire({
-        title: 'Cancel Contract?',
-        text: 'This will set the contract status to CANCELLED.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, cancel it!',
-      });
-      if (!isConfirmed) return;
 
-      await cancelContract(id);
-      refetchContracts();
-      Swal.fire({
-        title: 'Success',
-        text: 'Contract cancelled.',
-        icon: 'success',
-      });
-    } catch (error) {
-      console.error('Error cancelling contract:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Failed to cancel contract.',
-        icon: 'error',
-      });
-    }
-  };
 
   const handleRenew = async (id, newEndDate) => {
     try {

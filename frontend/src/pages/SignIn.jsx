@@ -166,6 +166,12 @@ export default function SignIn(props) {
               control={<Checkbox value="remember" color="primary" />}
               label="Remember me"
             />
+            {/* Forgot Password Link */}
+            <Typography variant="body2" align="right">
+              <Link onClick={handleForgotOpen} style={{ cursor: 'pointer' }}>
+                Forgot password?
+              </Link>
+            </Typography>
             <ForgotPasswordDialog open={forgotOpen} handleClose={handleForgotClose} />
             <Button type="submit" fullWidth variant="contained">
               Sign in

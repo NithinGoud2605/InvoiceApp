@@ -90,7 +90,7 @@ export const updateContract = (contractId, data) =>
   apiRequest('put', `/contracts/${contractId}`, data);
 
 export const cancelContract = (contractId) =>
-  apiRequest('post', `/contracts/${contractId}/cancel`);
+  apiRequest('post', `/contracts/${contractId}/cancel`,{});
 
 export const renewContract = (contractId, body) =>
   apiRequest('post', `/contracts/${contractId}/renew`, body);

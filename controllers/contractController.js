@@ -1,7 +1,7 @@
 const { Contract, Client } = require('../models');
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const { uploadToS3, getPreSignedUrl } = require('../utils/s3Uploader');
+const { uploadToS3, getPreSignedUrl , deleteFromS3} = require('../utils/s3Uploader');
 
 // Configure AWS SDK with "nithin" profile credentials and region
 AWS.config.credentials = new AWS.SharedIniFileCredentials({ profile: 'nithin' });
@@ -305,19 +305,21 @@ async function getContractPdf(req, res) {
 
 
 
-
 /**
  * Cancels an existing contract.
  */
 async function cancelContract(req, res) {
   try {
+    console.log("Cancel contract request params:", req.params);
     const userId = req.user.id;
     const { id } = req.params;
     const contract = await Contract.findOne({ where: { id, userId } });
-    if (!contract) return res.status(404).json({ error: 'Contract not found' });
-
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
     contract.status = 'CANCELLED';
     await contract.save();
+    // Always send a JSON response
     return res.json({ message: `Contract ${id} has been cancelled.` });
   } catch (error) {
     console.error('Error cancelling contract:', error);
@@ -364,6 +366,40 @@ async function sendForSignature(req, res) {
   }
 }
 
+
+async function deleteContract(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const contract = await Contract.findOne({ where: { id, userId } });
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    // If there is an associated PDF, attempt to delete it from S3.
+    if (contract.pdfUrl && contract.pdfUrl.trim() !== "") {
+      let key;
+      // Assume that the pdfUrl stored is the S3 key.
+      // If it starts with 'http', you might need to parse the key from the URL.
+      // For simplicity, we assume that if it's a full URL, it's already the key.
+      key = contract.pdfUrl;
+      try {
+        await deleteFromS3(key);
+        console.log(`Successfully deleted PDF with key: ${key} from S3.`);
+      } catch (s3Error) {
+        console.error('Error deleting PDF from S3:', s3Error);
+        // You can decide whether to abort deletion or continue.
+      }
+    }
+
+    // Delete the contract record from the database.
+    await contract.destroy();
+    return res.json({ message: `Contract ${id} has been deleted.` });
+  } catch (error) {
+    console.error("Error deleting contract:", error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
 // Export all functions with explicit key-value pairs
 module.exports = {
   upload: multer().single('file'),
@@ -374,5 +410,6 @@ module.exports = {
   cancelContract,
   renewContract,
   sendForSignature,
-  getContractPdf, // <-- Add this line
+  getContractPdf,
+  deleteContract, // <-- Add this line
 };

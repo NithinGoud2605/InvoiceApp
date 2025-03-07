@@ -43,6 +43,34 @@ const RecentContracts = ({
       }
     }
   };
+// In your RecentContracts.jsx component
+const handleDownload = async (contractId) => {
+  try {
+    // First, get the pre-signed URL from your API
+    const data = await getContractPdf(contractId);
+    const preSignedUrl = data.url;
+    
+    // Use fetch to get the file blob
+    const response = await fetch(preSignedUrl);
+    if (!response.ok) {
+      throw new Error('Failed to fetch file');
+    }
+    const blob = await response.blob();
+    
+    // Create a temporary URL and trigger download without revealing the direct S3 URL
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `contract-${contractId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error('Error downloading contract:', error);
+    alert('Failed to download contract PDF.');
+  }
+};
 
   // Helper to choose a color based on status
   const getStatusColor = (status) => {
@@ -138,7 +166,14 @@ const RecentContracts = ({
                           <i className="far fa-file-pdf" style={iconStyles.pdf} />
                         </IconButton>
                       </Tooltip>
+                      
                     )}
+                    <Tooltip title="Download PDF">
+  <IconButton onClick={() => handleDownload(contract.id)}>
+    <i className="fas fa-download" style={{ ...iconStyles.pdf, color: '#1976d2' }} />
+  </IconButton>
+</Tooltip>
+
                   </TableCell>
                 </TableRow>
 
