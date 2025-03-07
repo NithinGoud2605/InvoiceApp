@@ -1,37 +1,39 @@
+// src/components/Invoicecomp/CreateInvoice/lib/variables.js
 export const FORM_FILL_VALUES = {
     sender: {
-      name: 'John Doe',
-      address: '123 Main Street',
-      zipCode: '12345',
-      city: 'Metropolis',
-      country: 'USA',
-      email: 'john.doe@example.com',
-      phone: '555-1234',
+      name: '',
+      address: '',
+      zipCode: '',
+      city: '',
+      country: '',
+      email: '',
+      phone: '',
+      customInputs: [],
     },
     receiver: {
-      name: 'Jane Smith',
-      address: '456 Elm Street',
-      zipCode: '67890',
-      city: 'Gotham',
-      country: 'USA',
-      email: 'jane.smith@example.com',
-      phone: '555-5678',
+      name: '',
+      address: '',
+      zipCode: '',
+      city: '',
+      country: '',
+      email: '',
+      phone: '',
+      customInputs: [],
     },
     details: {
-      invoiceNumber: 'INV-001',
-      invoiceDate: new Date().toISOString().slice(0, 10),
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      currency: 'USD',
+      invoiceNumber: '',
+      invoiceDate: '',
+      dueDate: '',
+      currency: '',
       items: [],
-      subTotal: 0,
-      totalAmount: 0,
-      // Add any other default fields as needed
+      charges: [], // Added charges array
+      paymentInformation: {
+        bankName: '',
+        accountName: '',
+        accountNumber: '',
+      },
+      additionalNotes: '',
+      paymentTerms: '',
+      pdfTemplate: 1,
     },
   };
-  
-  export const DATE_OPTIONS = { year: 'numeric', month: '2-digit', day: '2-digit' };
-  
-  export const BASE_URL = 'https://example.com';
-  
-  export const AUTHOR_GITHUB = 'https://github.com/yourusername';
-  

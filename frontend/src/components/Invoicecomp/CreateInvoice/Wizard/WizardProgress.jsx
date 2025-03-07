@@ -1,3 +1,4 @@
+// src/components/Invoicecomp/CreateInvoice/Wizard/WizardProgress.jsx
 import React from 'react';
 import { Stepper, Step, StepLabel, StepIcon, Typography } from '@mui/material';
 import { useFormContext } from 'react-hook-form';
@@ -15,8 +16,9 @@ const WizardProgress = () => {
     { id: 0, label: t("fromAndTo"), isValid: !errors.sender && !errors.receiver },
     { id: 1, label: t("invoiceDetails"), isValid: !errors.details?.invoiceNumber },
     { id: 2, label: t("lineItems"), isValid: !errors.details?.items },
-    { id: 3, label: t("paymentInfo"), isValid: !errors.details?.paymentInformation },
-    { id: 4, label: t("summary"), isValid: !errors.details?.totalAmount },
+    { id: 3, label: t("charges"), isValid: !errors.details?.charges }, // Added Charges step
+    { id: 4, label: t("paymentInfo"), isValid: !errors.details?.paymentInformation },
+    { id: 5, label: t("summary"), isValid: !errors.details?.totalAmount },
   ];
 
   return (

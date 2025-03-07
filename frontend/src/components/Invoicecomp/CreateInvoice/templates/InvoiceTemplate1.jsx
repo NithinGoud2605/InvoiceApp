@@ -3,7 +3,12 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 
 const InvoiceTemplate1 = ({ sender, receiver, details, logo }) => {
-  const totalAmount = details.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
+  const itemsTotal = details.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
+  const chargesTotal = details.charges?.reduce((sum, charge) => {
+    const amount = Number(charge.amount) || 0;
+    return charge.type === 'discount' ? sum - amount : sum + amount;
+  }, 0) || 0;
+  const totalAmount = itemsTotal + chargesTotal;
 
   return (
     <Box sx={{ p: 4, fontFamily: 'Arial, sans-serif', width: '100%', height: '100%' }}>
@@ -45,8 +50,22 @@ const InvoiceTemplate1 = ({ sender, receiver, details, logo }) => {
         ) : (
           <Typography>No items added yet.</Typography>
         )}
-        <Typography variant="h6" sx={{ mt: 2, textAlign: 'right' }}>Total: ${totalAmount} {details.currency || 'USD'}</Typography>
+        <Typography sx={{ mt: 2, textAlign: 'right' }}>Subtotal: ${itemsTotal}</Typography>
       </Box>
+      {details.charges?.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom>Additional Charges:</Typography>
+          {details.charges.map((charge, index) => (
+            <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #e0e0e0' }}>
+              <Typography>{charge.description} ({charge.type})</Typography>
+              <Typography>{charge.type === 'discount' ? '-' : ''}${charge.amount}</Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Typography variant="h6" sx={{ mb: 4, textAlign: 'right' }}>
+        Total: ${totalAmount} {details.currency || 'USD'}
+      </Typography>
       {details.signature?.data && (
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6">Signature:</Typography>
