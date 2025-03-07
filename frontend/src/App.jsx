@@ -10,6 +10,7 @@ import AppTheme from './shared-theme/AppTheme';
 import { UserProvider } from './contexts/UserContext';
 import PrivateRoute from './PrivateRoute';
 import CircularProgress from '@mui/material/CircularProgress';
+import './i18n'; // Import the setup file
 
 // Lazy-load the Dashboard page
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));

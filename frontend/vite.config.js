@@ -3,23 +3,16 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-
 export default defineConfig({
   plugins: [
-    // Enables React fast refresh and JSX transformation
-    react({
-      // Additional options can be added here if needed
-      fastRefresh: true,
-    }),
-    // Tailwind CSS integration
+    react({ fastRefresh: true }),
     tailwindcss(),
-    // Optional: Generates bundle analysis report after build
   ],
-  server: {
-    hmr: true,  // Hot Module Replacement enabled (default in Vite)
+  resolve: {
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
   },
-
-    // Optionally adjust the chunk size warning limit if needed
-    chunkSizeWarningLimit: 600,
-  
+  server: {
+    hmr: true,
+  },
+  chunkSizeWarningLimit: 600,
 });
