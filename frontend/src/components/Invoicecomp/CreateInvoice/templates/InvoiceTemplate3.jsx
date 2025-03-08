@@ -3,6 +3,12 @@ import { Box, Typography, useTheme } from '@mui/material';
 import { formatNumberWithCommas } from '../lib/helpers';
 import { motion } from 'framer-motion';
 
+const formatDate = (val) => {
+  if (!val) return 'N/A';
+  const d = new Date(val);
+  return isNaN(d) ? 'N/A' : d.toLocaleDateString();
+};
+
 const InvoiceTemplate3 = ({
   sender = {},
   receiver = {},
@@ -30,6 +36,9 @@ const InvoiceTemplate3 = ({
     }
   };
 
+  const invoiceDate = formatDate(details.invoiceDate);
+  const dueDate = formatDate(details.dueDate);
+
   return (
     <Box
       sx={{
@@ -44,7 +53,6 @@ const InvoiceTemplate3 = ({
           border: 'none',
           bgcolor: '#fff'
         },
-        // Highlight if no items
         ...(hasMissingData && {
           border: '2px solid #ff4444',
           p: 3
@@ -53,7 +61,6 @@ const InvoiceTemplate3 = ({
       role="document"
       aria-label="Invoice Template 3"
     >
-      {/* Warning if no items */}
       {hasMissingData && (
         <Typography
           variant="body2"
@@ -103,7 +110,6 @@ const InvoiceTemplate3 = ({
         </Typography>
       </Box>
 
-      {/* Bill To */}
       <Box
         sx={{
           mb: 4,
@@ -135,7 +141,6 @@ const InvoiceTemplate3 = ({
         </Typography>
       </Box>
 
-      {/* Invoice Details */}
       <Box sx={{ mb: 4 }} aria-labelledby="details-header">
         <Typography
           variant="h6"
@@ -145,17 +150,16 @@ const InvoiceTemplate3 = ({
           Details:
         </Typography>
         <Typography sx={{ color: theme.palette.text.secondary }}>
-          Invoice #: {details.invoiceNumber}
+          Invoice #: {details.invoiceNumber || 'N/A'}
         </Typography>
         <Typography sx={{ color: theme.palette.text.secondary }}>
-          Issue Date: {details.invoiceDate}
+          Issue Date: {invoiceDate}
         </Typography>
         <Typography sx={{ color: theme.palette.text.secondary }}>
-          Due Date: {details.dueDate}
+          Due Date: {dueDate}
         </Typography>
       </Box>
 
-      {/* Items */}
       <Box sx={{ mb: 4 }} aria-labelledby="items-header">
         <Typography
           variant="h6"
@@ -208,7 +212,6 @@ const InvoiceTemplate3 = ({
         )}
       </Box>
 
-      {/* Total */}
       <Typography
         variant="h5"
         sx={{
@@ -226,7 +229,6 @@ const InvoiceTemplate3 = ({
         {details.currency || 'USD'}
       </Typography>
 
-      {/* Signature (if any) */}
       {details.signature?.data && (
         <Box sx={{ mt: 4 }} aria-labelledby="signature-header">
           <Typography
@@ -249,7 +251,6 @@ const InvoiceTemplate3 = ({
         </Box>
       )}
 
-      {/* Footer / Branding */}
       <Box
         sx={{
           mt: 4,

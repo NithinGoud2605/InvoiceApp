@@ -1,185 +1,135 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
-
-// In your case, pdfFonts is already the vfs data:
-pdfMake.vfs = pdfFonts;
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import html2pdf from 'html2pdf.js';
 
 const InvoiceContext = createContext();
+
+// A valid transparent 1×1 PNG fallback data URL
+const transparentFallbackLogo =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 export const InvoiceProvider = ({ children }) => {
   const [invoicePdf, setInvoicePdf] = useState({ size: 0, url: '' });
   const [savedInvoices, setSavedInvoices] = useState([]);
 
-  // Store user's uploaded company logo (as a base64 string)
-  const [companyLogo, setCompanyLogo] = useState(null);
-
-  // Upload a custom company logo as base64
-  const handleCompanyLogoUpload = useCallback((file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCompanyLogo(e.target.result);
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  // -- Utility to format currency, e.g. using Intl
-  const formatCurrency = useCallback((amount, currency = 'USD') => {
+  // Utility to format currency
+  const formatCurrency = useCallback((amount, currency) => {
+    const validCurrency = currency && currency.trim() ? currency : 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency
+      currency: validCurrency
     }).format(amount);
   }, []);
 
-  // -- Calculate total from items, charges, and optional tax
+  // Calculate total from items, charges, and optional tax
   const calculateTotal = useCallback((data) => {
     if (!data?.details) return 0;
-
     const { items = [], charges = [], tax = 0 } = data.details;
-
     const itemsTotal = items.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       return sum + quantity * unitPrice;
     }, 0);
-
     const chargesTotal = charges.reduce((sum, charge) => {
       const amount = Number(charge.amount) || 0;
       return charge.type === 'discount' ? sum - amount : sum + amount;
     }, 0);
-
     const totalBeforeTax = itemsTotal + chargesTotal;
     const taxAmount = totalBeforeTax * (Number(tax) / 100);
-
     return totalBeforeTax + taxAmount;
   }, []);
 
-  // -- Build the PDF definition object for pdfMake
-  const generatePdfDefinition = useCallback(
-    (data) => {
-      // Minimal validation
-      if (!data?.details || !data?.sender || !data?.receiver) {
-        return {
-          content: [
-            {
-              text: 'Invalid data provided. Cannot generate PDF.',
-              style: 'header'
-            }
-          ]
-        };
+  // --- Approach A: pdf-lib manual generation
+  const generatePdfDocument = useCallback(
+    async (data) => {
+      // Create a new PDF doc, add an A4 page
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595, 842]);
+      const { width, height } = page.getSize();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      // Decide which logo to use
+      const logoDataUrl =
+        typeof data.sender.logo === 'string' && data.sender.logo.startsWith('data:image/')
+          ? data.sender.logo
+          : transparentFallbackLogo;
+
+      // Embed the PNG logo if valid
+      try {
+        const logoImage = await pdfDoc.embedPng(logoDataUrl);
+        const logoDims = logoImage.scale(0.5);
+        page.drawImage(logoImage, {
+          x: width - logoDims.width - 50,
+          y: height - logoDims.height - 50,
+          width: logoDims.width,
+          height: logoDims.height,
+        });
+      } catch (err) {
+        console.error("Error embedding logo image:", err);
       }
 
+      // Example text
+      page.drawText(`Invoice #${data.details.invoiceNumber || 'N/A'}`, {
+        x: 50,
+        y: height - 50,
+        size: 18,
+        font,
+        color: rgb(0, 0, 0),
+      });
+
+      // etc. - add your layout
       const total = calculateTotal(data);
-      const { items = [], charges = [], currency = 'USD', tax } = data.details;
+      page.drawText(`Total: ${formatCurrency(total, data.details.currency)}`, {
+        x: 50,
+        y: height - 80,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      });
 
-      const docDefinition = {
-        content: [
-          // If user has uploaded a company logo, show it at the top
-          companyLogo
-            ? {
-                image: companyLogo,
-                width: 120,
-                margin: [0, 0, 0, 20]
-              }
-            : null,
+      return pdfDoc;
+    },
+    [calculateTotal, formatCurrency]
+  );
 
-          { text: `Invoice #${data.details.invoiceNumber || 'N/A'}`, style: 'header' },
-          {
-            text: `From: ${data.sender.name || 'N/A'}`,
-            margin: [0, 20, 0, 10]
-          },
-          {
-            text: `To: ${data.receiver.name || 'N/A'}`,
-            margin: [0, 0, 0, 10]
-          },
-          {
-            table: {
-              headerRows: 1,
-              widths: ['*', 'auto', 'auto', 'auto'],
-              body: [
-                ['Item', 'Quantity', 'Rate', 'Total'],
-                ...items.map((item) => {
-                  const qty = Number(item.quantity) || 0;
-                  const rate = Number(item.unitPrice) || 0;
-                  return [
-                    item.name || 'N/A',
-                    qty,
-                    formatCurrency(rate, currency),
-                    formatCurrency(qty * rate, currency)
-                  ];
-                })
-              ]
-            }
-          },
-          ...(charges.length
-            ? [
-                {
-                  text: 'Additional Charges:',
-                  style: 'subheader',
-                  margin: [0, 20, 0, 10]
-                },
-                {
-                  table: {
-                    headerRows: 1,
-                    widths: ['*', 'auto', 'auto'],
-                    body: [
-                      ['Description', 'Type', 'Amount'],
-                      ...charges.map((charge) => [
-                        charge.description || 'N/A',
-                        charge.type || 'N/A',
-                        formatCurrency(charge.amount, currency)
-                      ])
-                    ]
-                  }
-                }
-              ]
-            : []),
-          tax
-            ? {
-                text: `Tax (${tax}%) is applied on the items + charges total above.`,
-                margin: [0, 10, 0, 0]
-              }
-            : {},
-          {
-            text: `Total: ${formatCurrency(total, currency)}`,
-            style: 'total',
-            margin: [0, 20, 0, 0]
-          },
-          // Example of optionally including a signature image if present in data:
-          data.signatureData
-            ? {
-                image: data.signatureData,
-                width: 150,
-                margin: [0, 20, 0, 0]
-              }
-            : null
-        ].filter(Boolean),
-        styles: {
-          header: { fontSize: 18, bold: true },
-          subheader: { fontSize: 14, bold: true },
-          total: { fontSize: 14, bold: true }
-        }
+  // onFormSubmit -> PDF creation using pdf-lib
+  const onFormSubmit = useCallback(async (data) => {
+    try {
+      const pdfDoc = await generatePdfDocument(data);
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setInvoicePdf({ size: blob.size, url });
+      console.log('pdf-lib PDF generated, blob size:', blob.size);
+    } catch (error) {
+      console.error("Error generating PDF with pdf-lib:", error);
+    }
+  }, [generatePdfDocument]);
+
+  // --- Approach B: html2pdf.js capturing your HTML
+  // This function requires an HTML element reference that contains the invoice layout
+  const onFormSubmitHtml2pdf = useCallback(async (element) => {
+    try {
+      // Basic config
+      const opt = {
+        margin: 0.5,
+        filename: `invoice-${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 
-      return docDefinition;
-    },
-    [calculateTotal, formatCurrency, companyLogo]
-  );
+      // Convert the element to a PDF blob
+      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setInvoicePdf({ size: pdfBlob.size, url });
+      console.log('html2pdf PDF generated, blob size:', pdfBlob.size);
+    } catch (error) {
+      console.error("Error generating PDF with html2pdf.js:", error);
+    }
+  }, []);
 
-  // -- Method to handle form submission -> PDF creation
-  const onFormSubmit = useCallback(
-    (data) => {
-      const docDefinition = generatePdfDefinition(data);
-      pdfMake.createPdf(docDefinition).getBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        setInvoicePdf({ size: blob.size, url });
-      });
-    },
-    [generatePdfDefinition]
-  );
-
-  // -- Common PDF actions
+  // PDF actions
   const previewPdfInTab = useCallback(() => {
     if (invoicePdf.url) window.open(invoicePdf.url, '_blank');
   }, [invoicePdf.url]);
@@ -209,7 +159,6 @@ export const InvoiceProvider = ({ children }) => {
   }, [invoicePdf.url]);
 
   const saveInvoice = useCallback(() => {
-    // For demonstration, we only keep a single "details" object
     setSavedInvoices((prev) => [
       ...prev,
       { ...invoicePdf, details: { updatedAt: new Date().toISOString() } }
@@ -217,7 +166,6 @@ export const InvoiceProvider = ({ children }) => {
   }, [invoicePdf]);
 
   const sendPdfToMail = useCallback(async (email) => {
-    // Placeholder for an API call or a utility function
     try {
       console.log(`Sending PDF to ${email}...`);
       // Actually do something here, e.g. POST to your server
@@ -230,6 +178,7 @@ export const InvoiceProvider = ({ children }) => {
     setInvoicePdf({ size: 0, url: '' });
   }, []);
 
+  // Example of importing an invoice from JSON
   const importInvoice = useCallback(
     (file) => {
       const reader = new FileReader();
@@ -260,12 +209,25 @@ export const InvoiceProvider = ({ children }) => {
     setSavedInvoices([]);
   }, []);
 
+  // Example: uploading a logo to context
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const handleCompanyLogoUpload = useCallback((file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCompanyLogo(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   return (
     <InvoiceContext.Provider
       value={{
         invoicePdf,
+        setInvoicePdf,  // Ensure we expose setInvoicePdf if we want to manipulate it externally
         savedInvoices,
-        onFormSubmit,
+        onFormSubmit,        // pdf-lib approach
+        onFormSubmitHtml2pdf,// html2pdf.js approach
         previewPdfInTab,
         downloadPdf,
         printPdf,
@@ -276,8 +238,6 @@ export const InvoiceProvider = ({ children }) => {
         exportInvoiceAs,
         deleteInvoice,
         newInvoice,
-
-        // New for logo uploading
         companyLogo,
         handleCompanyLogoUpload
       }}

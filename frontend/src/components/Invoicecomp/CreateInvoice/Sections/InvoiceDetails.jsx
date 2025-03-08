@@ -7,20 +7,25 @@ import 'react-datepicker/dist/react-datepicker.css';
 import TemplateSelector from '../TemplateSelector';
 
 const InvoiceDetails = () => {
-  const { control, register, setValue } = useFormContext();
+  const { control, register, setValue, watch } = useFormContext();
   const { t } = useTranslation();
+
+  // We watch the "details.invoiceLogo" field so we can show a preview
+  const uploadedLogo = watch('details.invoiceLogo');
 
   // Upload user-selected logo as a base64-encoded string
   const handleLogoUpload = useCallback(
     (e) => {
       const file = e.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setValue('details.invoiceLogo', reader.result); // Store base64 image in the form
-        };
-        reader.readAsDataURL(file);
-      }
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setValue('details.invoiceLogo', reader.result, {
+          shouldDirty: true
+        });
+      };
+      reader.readAsDataURL(file);
     },
     [setValue]
   );
@@ -97,12 +102,31 @@ const InvoiceDetails = () => {
         />
 
         {/* Invoice Logo Upload */}
-        <Box sx={{ mt: '16px' }}>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            {t('form.steps.invoiceDetails.companyLogo') || 'Company Logo:'}
+          </Typography>
           <input
             type="file"
             accept="image/*"
             onChange={handleLogoUpload}
           />
+
+          {/* Preview the uploaded logo if we have it */}
+          {uploadedLogo && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2">Logo Preview:</Typography>
+              <img
+                src={uploadedLogo}
+                alt="Company Logo Preview"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '100px',
+                  border: '1px solid #e0e0e0'
+                }}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
 

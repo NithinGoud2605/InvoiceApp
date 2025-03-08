@@ -3,12 +3,20 @@ import { Box, Typography, useTheme } from '@mui/material';
 import { formatNumberWithCommas } from '../lib/helpers';
 import { motion } from 'framer-motion';
 
+const formatDate = (val) => {
+  if (!val) return 'N/A';
+  const d = new Date(val);
+  return isNaN(d) ? 'N/A' : d.toLocaleDateString();
+};
+
 const InvoiceTemplate4 = ({
   sender = {},
   receiver = {},
   details = {},
   logo
 }) => {
+  const theme = useTheme();
+
   // Compute total from items
   const totalAmount =
     details.items?.reduce(
@@ -16,10 +24,9 @@ const InvoiceTemplate4 = ({
       0
     ) || 0;
 
-  const theme = useTheme();
   const hasMissingData = !details.items?.length;
 
-  // Basic framer-motion variants for item animation
+  // Basic framer-motion variants
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -28,6 +35,10 @@ const InvoiceTemplate4 = ({
       transition: { duration: 0.3 }
     }
   };
+
+  // Format invoice & due dates
+  const invoiceDate = formatDate(details.invoiceDate);
+  const dueDate = formatDate(details.dueDate);
 
   return (
     <Box
@@ -44,7 +55,6 @@ const InvoiceTemplate4 = ({
           border: 'none',
           bgcolor: '#fff'
         },
-        // Highlight if no items
         ...(hasMissingData && {
           border: '2px solid #ff4444',
           p: 3
@@ -53,7 +63,6 @@ const InvoiceTemplate4 = ({
       role="document"
       aria-label="Invoice Template 4"
     >
-      {/* Warning if no items */}
       {hasMissingData && (
         <Typography
           variant="body2"
@@ -152,10 +161,10 @@ const InvoiceTemplate4 = ({
             Invoice #: {details.invoiceNumber}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary }}>
-            Issue Date: {details.invoiceDate}
+            Issue Date: {invoiceDate}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary }}>
-            Due Date: {details.dueDate}
+            Due Date: {dueDate}
           </Typography>
         </Box>
       </Box>
@@ -172,7 +181,6 @@ const InvoiceTemplate4 = ({
           </Typography>
         </Box>
 
-        {/* List of Items */}
         {details.items?.length ? (
           details.items.map((item, index) => (
             <motion.div
@@ -198,8 +206,7 @@ const InvoiceTemplate4 = ({
                   {item.quantity}
                 </Typography>
                 <Typography sx={{ color: theme.palette.text.primary }}>
-                  $
-                  {formatNumberWithCommas(item.unitPrice.toFixed(2))}
+                  ${formatNumberWithCommas(item.unitPrice.toFixed(2))}
                 </Typography>
                 <Typography sx={{ color: theme.palette.text.primary }}>
                   $
@@ -216,7 +223,6 @@ const InvoiceTemplate4 = ({
           </Typography>
         )}
 
-        {/* Total */}
         <Box
           sx={{
             mt: 2,

@@ -6,10 +6,10 @@ import {
   Tabs,
   Tab,
   Box,
-  Button
+  Button,
 } from '@mui/material';
 import { useFormContext } from 'react-hook-form';
-import { useSignatureContext } from './SignatureContext';
+import { useSignatureContext } from '../contexts/SignatureContext';
 import DrawSignature from './DrawSignature';
 import TypeSignature from './TypeSignature';
 import UploadSignature from './UploadSignature';
@@ -23,7 +23,7 @@ const SignatureModal = () => {
     typedSignature,
     selectedFont,
     uploadSignatureImg,
-    signatureRef
+    signatureRef,
   } = useSignatureContext();
   const { t } = useTranslation();
 
@@ -42,7 +42,7 @@ const SignatureModal = () => {
     setTab(newValue);
   }, []);
 
-  // Save the signature based on the current active tab
+  // Save the signature based on the active tab
   const handleSaveSignature = useCallback(() => {
     if (tab === 0) {
       // Drawn signature
@@ -54,7 +54,7 @@ const SignatureModal = () => {
         'details.signature',
         {
           data: typedSignature,
-          fontFamily: selectedFont?.name
+          fontFamily: selectedFont?.name,
         },
         { shouldDirty: true }
       );
@@ -71,10 +71,10 @@ const SignatureModal = () => {
     selectedFont,
     uploadSignatureImg,
     setValue,
-    handleClose
+    handleClose,
   ]);
 
-  // If the modal is opened, re-render the drawn signature from saved data
+  // When the modal opens, re-render the drawn signature from saved data
   useEffect(() => {
     if (open && signatureData && signatureRef.current) {
       setTimeout(() => {
@@ -89,30 +89,17 @@ const SignatureModal = () => {
         {t('form.steps.summary.signature.heading')}
       </Button>
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>
-          {t('form.steps.summary.signature.heading')}
-        </DialogTitle>
+        <DialogTitle>{t('form.steps.summary.signature.heading')}</DialogTitle>
         <DialogContent>
-          <Tabs
-            value={tab}
-            onChange={handleTabChange}
-            variant="fullWidth"
-          >
+          <Tabs value={tab} onChange={handleTabChange} variant="fullWidth">
             <Tab label={t('form.steps.summary.signature.draw')} />
             <Tab label={t('form.steps.summary.signature.type')} />
             <Tab label={t('form.steps.summary.signature.upload')} />
           </Tabs>
-
           <Box sx={{ mt: 2, p: 2 }}>
-            {tab === 0 && (
-              <DrawSignature handleSaveSignature={handleSaveSignature} />
-            )}
-            {tab === 1 && (
-              <TypeSignature handleSaveSignature={handleSaveSignature} />
-            )}
-            {tab === 2 && (
-              <UploadSignature handleSaveSignature={handleSaveSignature} />
-            )}
+            {tab === 0 && <DrawSignature handleSaveSignature={handleSaveSignature} />}
+            {tab === 1 && <TypeSignature handleSaveSignature={handleSaveSignature} />}
+            {tab === 2 && <UploadSignature handleSaveSignature={handleSaveSignature} />}
           </Box>
         </DialogContent>
       </Dialog>

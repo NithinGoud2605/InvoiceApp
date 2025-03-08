@@ -8,7 +8,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material';
-import { useSignatureContext } from './SignatureContext';
+import { useSignatureContext } from '../contexts/SignatureContext';
 
 const fonts = [
   { name: 'Dancing Script', value: "'Dancing Script', cursive" },

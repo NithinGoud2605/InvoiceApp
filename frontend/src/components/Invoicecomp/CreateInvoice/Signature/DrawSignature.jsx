@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Button, Box } from '@mui/material';
 import SignatureCanvas from 'react-signature-canvas';
-import { useSignatureContext } from './SignatureContext';
+import { useSignatureContext } from '../contexts/SignatureContext';
 
 const DrawSignature = ({ handleSaveSignature }) => {
   const { signatureRef, handleCanvasEnd } = useSignatureContext();

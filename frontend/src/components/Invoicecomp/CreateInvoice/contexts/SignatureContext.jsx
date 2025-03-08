@@ -20,12 +20,10 @@ export const SignatureProvider = ({ children }) => {
   const handleUploadSignatureChange = useCallback((e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!window.FileReader) {
       alert('FileReader API not supported in this browser.');
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => setUploadSignatureImg(reader.result);
     reader.readAsDataURL(file);
@@ -39,11 +37,11 @@ export const SignatureProvider = ({ children }) => {
   const clearSignature = useCallback(() => {
     setSignatureData('');
     if (signatureRef.current && signatureRef.current.clear) {
-      signatureRef.current.clear(); // If using a library like react-signature-canvas
+      signatureRef.current.clear();
     }
   }, []);
 
-  // If using react-signature-canvas or similar, call this when the user finishes drawing
+  // When drawing ends, capture the canvas as a data URL
   const handleCanvasEnd = useCallback(() => {
     if (signatureRef.current && signatureRef.current.toDataURL) {
       setSignatureData(signatureRef.current.toDataURL());

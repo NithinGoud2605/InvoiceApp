@@ -14,6 +14,8 @@ import InvoiceDetails from './Sections/InvoiceDetails';
 import Items from './Sections/Items';
 import PaymentInformation from './Sections/PaymentInformation';
 import InvoiceSummary from './Sections/InvoiceSummary';
+import Charges from './Sections/Charges';
+
 
 const InvoiceForm = ({ onClose }) => {
   return (
@@ -45,24 +47,27 @@ const InvoiceForm = ({ onClose }) => {
           p: 3
         }}
       >
-        <Wizard>
-          <WizardStep>
-            <BillFromSection />
-            <BillToSection />
-          </WizardStep>
-          <WizardStep>
-            <InvoiceDetails />
-          </WizardStep>
-          <WizardStep>
-            <Items />
-          </WizardStep>
-          <WizardStep>
-            <PaymentInformation />
-          </WizardStep>
-          <WizardStep>
-            <InvoiceSummary onClose={onClose} />
-          </WizardStep>
-        </Wizard>
+         <Wizard>
+      <WizardStep>
+        <BillFromSection />
+        <BillToSection />
+      </WizardStep>
+      <WizardStep>
+        <InvoiceDetails />
+      </WizardStep>
+      <WizardStep>
+        <Items />
+      </WizardStep>
+      <WizardStep>
+        <Charges />
+      </WizardStep>
+      <WizardStep>
+        <PaymentInformation />
+      </WizardStep>
+      <WizardStep>
+        <InvoiceSummary onClose={onClose} />
+      </WizardStep>
+    </Wizard>
       </CardContent>
     </Card>
   );

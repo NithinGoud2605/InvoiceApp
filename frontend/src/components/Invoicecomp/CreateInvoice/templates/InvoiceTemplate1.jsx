@@ -20,6 +20,14 @@ const calculateTotals = (items, charges) => {
   return itemsTotal + chargesTotal;
 };
 
+// Safely convert a date value to string
+// If it's not a valid date, or missing, return 'N/A'
+const formatDate = (val) => {
+  if (!val) return 'N/A';
+  const d = new Date(val);
+  return isNaN(d) ? 'N/A' : d.toLocaleDateString();
+};
+
 const InvoiceTemplate1 = ({
   sender = {},
   receiver = {},
@@ -52,6 +60,10 @@ const InvoiceTemplate1 = ({
       }
     })
   };
+
+  // Convert invoice dates to safe strings
+  const issueDate = formatDate(details.invoiceDate);
+  const dueDate = formatDate(details.dueDate);
 
   return (
     <Box
@@ -89,13 +101,10 @@ const InvoiceTemplate1 = ({
         aria-labelledby="company-header"
       >
         <img
-          src={logo || '/default-logo.png'}
+          src={sender.logo || '/default-logo.png'}
           alt={`${sender.name || 'Company'} Logo`}
           style={{ maxWidth: '140px', maxHeight: '100px' }}
           aria-hidden="true"
-          onError={(e) => {
-            e.target.src = '/default-logo.png';
-          }}
         />
         <Box sx={{ textAlign: 'right' }} id="company-header">
           <Typography
@@ -140,9 +149,7 @@ const InvoiceTemplate1 = ({
             {receiver.address || 'Address'}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
-            {`${receiver.zipCode || 'ZIP'} ${
-              receiver.city || 'City'
-            }`}
+            {`${receiver.zipCode || 'ZIP'} ${receiver.city || 'City'}`}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
             {receiver.country || 'Country'}
@@ -161,10 +168,10 @@ const InvoiceTemplate1 = ({
             Invoice #: {details.invoiceNumber || 'N/A'}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
-            Issue Date: {details.invoiceDate || 'N/A'}
+            Issue Date: {issueDate}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
-            Due Date: {details.dueDate || 'N/A'}
+            Due Date: {dueDate}
           </Typography>
         </Box>
       </Box>
@@ -202,8 +209,7 @@ const InvoiceTemplate1 = ({
                   {item.name} {item.description && `- ${item.description}`}
                 </Typography>
                 <Typography sx={{ color: theme.palette.text.primary }}>
-                  {item.quantity} x ${item.unitPrice.toFixed(2)} = $
-                  {(item.quantity * item.unitPrice).toFixed(2)}
+                {item.quantity} x ${Number(item.unitPrice).toFixed(2)} = ${Number(item.quantity * item.unitPrice).toFixed(2)}
                 </Typography>
               </Box>
             </motion.div>
@@ -263,9 +269,7 @@ const InvoiceTemplate1 = ({
         sx={{
           mb: 4,
           textAlign: 'right',
-          color: hasMissingData
-            ? '#ff4444'
-            : theme.palette.success.main
+          color: hasMissingData ? '#ff4444' : theme.palette.success.main
         }}
         aria-live="polite"
       >

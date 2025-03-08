@@ -3,7 +3,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  StepIcon,
   Typography,
   LinearProgress
 } from '@mui/material';
@@ -20,42 +19,18 @@ const WizardProgress = () => {
   } = useFormContext();
   const { t } = useTranslation();
 
-  // Define steps in a stable reference (optional)
+  // If you want to derive validity from errors, update the conditions below.
+  // For a simple case, we mark all steps as valid:
   const steps = useMemo(
     () => [
-      {
-        id: 0,
-        label: t('fromAndTo', 'From & To'),
-        // Check if no errors for sender & receiver
-        isValid: !errors.sender && !errors.receiver
-      },
-      {
-        id: 1,
-        label: t('invoiceDetails', 'Details'),
-        isValid: !errors.details?.invoiceNumber
-      },
-      {
-        id: 2,
-        label: t('lineItems', 'Items'),
-        isValid: !errors.details?.items
-      },
-      {
-        id: 3,
-        label: t('charges', 'Charges'),
-        isValid: !errors.details?.charges
-      },
-      {
-        id: 4,
-        label: t('paymentInfo', 'Payment'),
-        isValid: !errors.details?.paymentInformation
-      },
-      {
-        id: 5,
-        label: t('summary', 'Summary'),
-        isValid: !errors.details?.totalAmount
-      }
+      { id: 0, label: t("fromAndTo", "From & To"), isValid: true },
+      { id: 1, label: t("invoiceDetails", "Details"), isValid: true },
+      { id: 2, label: t("lineItems", "Items"), isValid: true },
+      { id: 3, label: t("charges", "Charges"), isValid: true },
+      { id: 4, label: t("paymentInfo", "Payment"), isValid: true },
+      { id: 5, label: t("summary", "Summary"), isValid: true },
     ],
-    [errors, t]
+    [t] // Remove errors from dependency if you don't rely on them
   );
 
   const progress = (activeStep / (steps.length - 1)) * 100;
@@ -67,13 +42,10 @@ const WizardProgress = () => {
         {steps.map((step) => {
           const completed = step.isValid && step.id < activeStep;
           const icon = step.isValid ? (
-            <CheckCircleIcon
-              color={step.id < activeStep ? 'success' : 'primary'}
-            />
+            <CheckCircleIcon color={step.id < activeStep ? 'success' : 'primary'} />
           ) : (
             <ErrorIcon color="error" />
           );
-
           return (
             <Step key={step.id} completed={completed}>
               <StepLabel

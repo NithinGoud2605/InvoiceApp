@@ -41,11 +41,7 @@ const LivePreview = ({ data }) => {
   };
 
   return (
-    <Box sx={{ width: '100%', height: '100%', overflow: 'auto' }}>
-      {/* If you want a heading for the live preview */}
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Live Preview
-      </Typography>
+    <Box>
       <DynamicInvoiceTemplate {...previewData} />
     </Box>
   );

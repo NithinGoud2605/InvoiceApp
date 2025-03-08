@@ -1,15 +1,16 @@
 // src/components/Invoicecomp/CreateInvoice/lib/variables.js
 export const FORM_FILL_VALUES = {
-    sender: {
-      name: '',
-      address: '',
-      zipCode: '',
-      city: '',
-      country: '',
-      email: '',
-      phone: '',
-      customInputs: [],
-    },
+  sender: {
+    name: '',
+    address: '',
+    zipCode: '',
+    city: '',
+    country: '',
+    email: '',
+    phone: '',
+    logo: '', // <-- Add this line
+    customInputs: []
+  },
     receiver: {
       name: '',
       address: '',

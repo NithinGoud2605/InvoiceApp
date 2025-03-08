@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import TextFieldWrapper from './TextFieldWrapper';
 
 const BillFromSection = () => {
-  const { control } = useFormContext();
+  const { control, setValue } = useFormContext();
   const { t } = useTranslation();
 
   // Manage dynamic array fields for custom inputs
@@ -23,12 +23,23 @@ const BillFromSection = () => {
     append({ key: '', value: '' });
   }, [append]);
 
-  const handleRemove = useCallback(
+  const handleRemoveCustomInput = useCallback(
     (index) => {
       remove(index);
     },
     [remove]
   );
+
+  // Handle uploading a company logo for the "sender"
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setValue('sender.logo', ev.target.result, { shouldDirty: true });
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -96,6 +107,13 @@ const BillFromSection = () => {
         sx={{ width: '48%', mt: 2 }}
       />
 
+      {/* Company Logo Upload Field */}
+      <Box sx={{ mt: 2 }}>
+      <Typography variant="subtitle1">Company Logo</Typography>
+      <input type="file" accept="image/*" onChange={handleLogoUpload} />
+    </Box>
+
+      {/* Dynamic Custom Inputs */}
       {fields.map((field, index) => (
         <Box key={field.id} sx={{ display: 'flex', gap: 2, mt: 2 }}>
           <TextFieldWrapper
@@ -103,14 +121,16 @@ const BillFromSection = () => {
             label="Custom Key"
             sx={{ width: '30%' }}
           />
-
           <TextFieldWrapper
             name={`sender.customInputs[${index}].value`}
             label="Custom Value"
             sx={{ flexGrow: 1 }}
           />
-
-          <Button variant="text" color="error" onClick={() => handleRemove(index)}>
+          <Button
+            variant="text"
+            color="error"
+            onClick={() => handleRemoveCustomInput(index)}
+          >
             Remove
           </Button>
         </Box>

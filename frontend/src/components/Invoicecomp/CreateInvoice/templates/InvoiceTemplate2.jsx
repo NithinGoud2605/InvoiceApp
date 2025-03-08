@@ -4,12 +4,11 @@ import { formatNumberWithCommas } from '../lib/helpers';
 import { DATE_OPTIONS } from '../lib/variables';
 import { motion } from 'framer-motion';
 
-// Safely format a date or return fallback
-const formatDate = (dateValue) => {
-  const dateObj = new Date(dateValue);
-  return isNaN(dateObj)
-    ? 'Invalid Date'
-    : dateObj.toLocaleDateString('en-US', DATE_OPTIONS);
+// Safely convert to date string
+const formatDate = (val) => {
+  if (!val) return 'N/A';
+  const d = new Date(val);
+  return isNaN(d) ? 'N/A' : d.toLocaleDateString('en-US', DATE_OPTIONS);
 };
 
 const InvoiceTemplate2 = ({
@@ -38,6 +37,10 @@ const InvoiceTemplate2 = ({
       transition: { duration: 0.3 }
     }
   };
+
+  // Format invoice & due dates safely
+  const invoiceDate = formatDate(details.invoiceDate);
+  const dueDate = formatDate(details.dueDate);
 
   return (
     <Box
@@ -113,10 +116,10 @@ const InvoiceTemplate2 = ({
             Invoice
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary }}>
-            Issued: {formatDate(details.invoiceDate)}
+            Issued: {invoiceDate}
           </Typography>
           <Typography sx={{ color: theme.palette.text.secondary }}>
-            Due: {formatDate(details.dueDate)}
+            Due: {dueDate}
           </Typography>
           <Box
             component="address"

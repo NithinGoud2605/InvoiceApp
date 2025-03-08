@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { Box, Button, Typography } from '@mui/material';
-import { useSignatureContext } from './SignatureContext';
+import { useSignatureContext } from '../contexts/SignatureContext';
 
 const UploadSignature = ({ handleSaveSignature }) => {
   const { setUploadSignatureImg, uploadSignatureImg } = useSignatureContext();
