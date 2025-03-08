@@ -1,24 +1,47 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle, Button, Box, Typography } from '@mui/material';
+import React, { useState, useCallback } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Button,
+  Box,
+  Typography
+} from '@mui/material';
 import { useInvoiceContext } from '../contexts/InvoiceContext';
 import ImportJsonButton from '../Modals/ImportJsonButton';
 import SavedInvoicesList from '../Lists/SavedInvoicesList';
 
 const InvoiceLoaderModal = ({ children }) => {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { savedInvoices } = useInvoiceContext();
+
+  // Open the modal
+  const handleOpen = useCallback(() => {
+    setIsOpen(true);
+  }, []);
+
+  // Close the modal
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+  }, []);
 
   return (
     <>
-      <Box onClick={() => setOpen(true)}>{children}</Box>
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+      {/* The trigger element: clicking it opens the dialog */}
+      <Box onClick={handleOpen}>
+        {children}
+      </Box>
+
+      <Dialog open={isOpen} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Saved Invoices</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
-            <Typography>You have {savedInvoices.length} saved invoices</Typography>
-            <ImportJsonButton setOpen={setOpen} />
+            <Typography>
+              You have {savedInvoices?.length || 0} saved invoices
+            </Typography>
+            <ImportJsonButton setOpen={setIsOpen} />
           </Box>
-          <SavedInvoicesList setModalState={setOpen} />
+          <SavedInvoicesList setModalState={setIsOpen} />
         </DialogContent>
       </Dialog>
     </>

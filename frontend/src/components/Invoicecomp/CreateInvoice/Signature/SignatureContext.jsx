@@ -1,19 +1,31 @@
-import React, { createContext, useContext, useRef, useState } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
 
 const SignatureContext = createContext();
 
 export const SignatureProvider = ({ children }) => {
   const signatureRef = useRef(null);
+
+  // Contains base64 data of the drawn signature
   const [signatureData, setSignatureData] = useState(null);
+
+  // Typed signature text
   const [typedSignature, setTypedSignature] = useState('');
-  const [selectedFont, setSelectedFont] = useState({ name: 'Dancing Script', value: "'Dancing Script', cursive" });
+
+  // Chosen font for typed signature
+  const [selectedFont, setSelectedFont] = useState({
+    name: 'Dancing Script',
+    value: "'Dancing Script', cursive"
+  });
+
+  // Stores uploaded signature image data
   const [uploadSignatureImg, setUploadSignatureImg] = useState(null);
 
-  const handleCanvasEnd = () => {
+  // Called when drawing on the canvas ends
+  const handleCanvasEnd = useCallback(() => {
     if (signatureRef.current) {
       setSignatureData(signatureRef.current.toDataURL());
     }
-  };
+  }, []);
 
   return (
     <SignatureContext.Provider
@@ -27,7 +39,7 @@ export const SignatureProvider = ({ children }) => {
         selectedFont,
         setSelectedFont,
         uploadSignatureImg,
-        setUploadSignatureImg,
+        setUploadSignatureImg
       }}
     >
       {children}

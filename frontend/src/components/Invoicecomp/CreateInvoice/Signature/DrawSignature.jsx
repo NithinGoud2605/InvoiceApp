@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button, Box } from '@mui/material';
 import SignatureCanvas from 'react-signature-canvas';
 import { useSignatureContext } from './SignatureContext';
@@ -6,16 +6,24 @@ import { useSignatureContext } from './SignatureContext';
 const DrawSignature = ({ handleSaveSignature }) => {
   const { signatureRef, handleCanvasEnd } = useSignatureContext();
 
-  const clearSignature = () => {
-    signatureRef.current.clear();
-  };
+  // Clear the canvas
+  const clearSignature = useCallback(() => {
+    if (signatureRef.current) {
+      signatureRef.current.clear();
+    }
+  }, [signatureRef]);
 
   return (
     <Box>
       <SignatureCanvas
         ref={signatureRef}
-        penColor="black"
-        canvasProps={{ width: 500, height: 200, className: 'sigCanvas', style: { border: '1px solid #e0e0e0' } }}
+        penColor="black" // If you want dynamic color, pass it as a prop or from context
+        canvasProps={{
+          width: 500,
+          height: 200,
+          className: 'sigCanvas',
+          style: { border: '1px solid #e0e0e0' }
+        }}
         onEnd={handleCanvasEnd}
       />
       <Box sx={{ mt: 2 }}>

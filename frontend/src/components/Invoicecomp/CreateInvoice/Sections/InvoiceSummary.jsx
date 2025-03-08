@@ -7,14 +7,21 @@ import SignatureModal from '../Signature/SignatureModal';
 const InvoiceSummary = () => {
   const { register } = useFormContext();
   const { t } = useTranslation();
+
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>{t("form.steps.summary.heading")}:</Typography>
+      <Typography variant="h6" gutterBottom>
+        {t('form.steps.summary.heading') || 'Invoice Summary'}:
+      </Typography>
+
       <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {/* Signature */}
         <SignatureModal />
+
+        {/* Additional Notes */}
         <TextField
           {...register('details.additionalNotes')}
-          label={t("form.steps.summary.additionalNotes")}
+          label={t('form.steps.summary.additionalNotes')}
           placeholder="Your additional notes"
           fullWidth
           multiline
@@ -22,9 +29,11 @@ const InvoiceSummary = () => {
           variant="outlined"
           size="small"
         />
+
+        {/* Payment Terms */}
         <TextField
           {...register('details.paymentTerms')}
-          label={t("form.steps.summary.paymentTerms")}
+          label={t('form.steps.summary.paymentTerms')}
           placeholder="Ex: Net 30"
           fullWidth
           multiline

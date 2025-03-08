@@ -1,15 +1,20 @@
-// src/components/Invoicecomp/CreateInvoice/PdfViewer/PdfViewer.jsx
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { useInvoiceContext } from '../contexts/InvoiceContext';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import LivePreview from './LivePreview';
-import FinalPdf from './FinalPdf';
+
+const FinalPdf = lazy(() => import('./FinalPdf'));
 
 const PdfViewer = () => {
   const { watch } = useFormContext();
   const { invoicePdf } = useInvoiceContext();
+
+  // React Hook Form data
   const formValues = watch();
+
+  // Determine if there's a generated PDF
+  const hasGeneratedPdf = invoicePdf?.size > 0;
 
   return (
     <Box
@@ -21,20 +26,33 @@ const PdfViewer = () => {
         justifyContent: 'center',
         alignItems: 'flex-start',
         bgcolor: '#f5f5f5',
-        p: 2,
+        p: 2
       }}
     >
       <Box
         sx={{
-          width: '595px', // A4 width in pixels (at 72 DPI)
-          height: '842px', // A4 height in pixels
+          width: '595px', // A4 width in px
+          height: '842px', // A4 height in px
           bgcolor: '#fff',
           boxShadow: 3,
           borderRadius: 2,
           overflow: 'hidden',
+          position: 'relative'
         }}
       >
-        {invoicePdf.size === 0 ? <LivePreview data={formValues} /> : <FinalPdf />}
+        <Suspense
+          fallback={
+            <CircularProgress
+              sx={{ position: 'absolute', top: '50%', left: '50%', zIndex: 10 }}
+            />
+          }
+        >
+          {hasGeneratedPdf ? (
+            <FinalPdf />
+          ) : (
+            <LivePreview data={formValues} />
+          )}
+        </Suspense>
       </Box>
     </Box>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Box, TextField, Typography, Button } from '@mui/material';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import AddIcon from '@mui/icons-material/Add';
@@ -7,77 +7,100 @@ import { useTranslation } from 'react-i18next';
 const BillToSection = () => {
   const { control, register } = useFormContext();
   const { t } = useTranslation();
-  const { fields, append, remove } = useFieldArray({
+
+  // Manage dynamic array fields for custom inputs
+  const {
+    fields,
+    append,
+    remove
+  } = useFieldArray({
     control,
-    name: 'receiver.customInputs',
+    name: 'receiver.customInputs'
   });
 
-  const addNewCustomInput = () => {
+  const handleAddNewCustomInput = useCallback(() => {
     append({ key: '', value: '' });
-  };
+  }, [append]);
+
+  const handleRemove = useCallback(
+    (index) => {
+      remove(index);
+    },
+    [remove]
+  );
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>{t("form.steps.fromAndTo.billTo")}:</Typography>
+      <Typography variant="h6" gutterBottom>
+        {t('form.steps.fromAndTo.billTo') || 'Bill To'}:
+      </Typography>
+
       <TextField
         {...register('receiver.name')}
         fullWidth
-        label={t("form.steps.fromAndTo.name")}
+        label={t('form.steps.fromAndTo.name')}
         placeholder="Receiver name"
         variant="outlined"
         size="small"
         sx={{ mb: 2 }}
       />
+
       <TextField
         {...register('receiver.address')}
         fullWidth
-        label={t("form.steps.fromAndTo.address")}
+        label={t('form.steps.fromAndTo.address')}
         placeholder="Receiver address"
         variant="outlined"
         size="small"
         sx={{ mb: 2 }}
       />
+
       <TextField
         {...register('receiver.zipCode')}
-        label={t("form.steps.fromAndTo.zipCode")}
+        label={t('form.steps.fromAndTo.zipCode')}
         placeholder="Zip code"
         variant="outlined"
         size="small"
         sx={{ width: '48%', mr: 2 }}
       />
+
       <TextField
         {...register('receiver.city')}
-        label={t("form.steps.fromAndTo.city")}
+        label={t('form.steps.fromAndTo.city')}
         placeholder="City"
         variant="outlined"
         size="small"
         sx={{ width: '48%' }}
       />
+
       <TextField
         {...register('receiver.country')}
-        label={t("form.steps.fromAndTo.country")}
+        label={t('form.steps.fromAndTo.country')}
         placeholder="Country"
         variant="outlined"
         size="small"
         sx={{ width: '48%', mt: 2 }}
       />
+
       <TextField
         {...register('receiver.email')}
         fullWidth
-        label={t("form.steps.fromAndTo.email")}
+        label={t('form.steps.fromAndTo.email')}
         placeholder="Receiver email"
         variant="outlined"
         size="small"
         sx={{ mt: 2 }}
       />
+
       <TextField
         {...register('receiver.phone')}
-        label={t("form.steps.fromAndTo.phone")}
+        label={t('form.steps.fromAndTo.phone')}
         placeholder="Receiver phone"
         variant="outlined"
         size="small"
         sx={{ width: '48%', mt: 2 }}
       />
+
       {fields.map((field, index) => (
         <Box key={field.id} sx={{ display: 'flex', gap: 2, mt: 2 }}>
           <TextField
@@ -94,13 +117,19 @@ const BillToSection = () => {
             size="small"
             sx={{ flexGrow: 1 }}
           />
-          <Button variant="text" color="error" onClick={() => remove(index)}>
+          <Button variant="text" color="error" onClick={() => handleRemove(index)}>
             Remove
           </Button>
         </Box>
       ))}
-      <Button startIcon={<AddIcon />} variant="text" onClick={addNewCustomInput} sx={{ mt: 2 }}>
-        {t("form.steps.fromAndTo.addCustomInput")}
+
+      <Button
+        startIcon={<AddIcon />}
+        variant="text"
+        onClick={handleAddNewCustomInput}
+        sx={{ mt: 2 }}
+      >
+        {t('form.steps.fromAndTo.addCustomInput') || 'Add Custom Input'}
       </Button>
     </Box>
   );

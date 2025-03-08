@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useRef, useState } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
 
 const SignatureContext = createContext();
 
 export const SignatureProvider = ({ children }) => {
   const signatureRef = useRef(null);
   const uploadSignatureRef = useRef(null);
+
   const [signatureData, setSignatureData] = useState('');
   const [typedSignature, setTypedSignature] = useState('');
   const [selectedFont, setSelectedFont] = useState({ name: 'Roboto', variable: 'Roboto' });
@@ -15,32 +16,44 @@ export const SignatureProvider = ({ children }) => {
   ]);
   const [uploadSignatureImg, setUploadSignatureImg] = useState('');
 
-  const handleUploadSignatureChange = (e) => {
+  // Handle uploading a signature image
+  const handleUploadSignatureChange = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setUploadSignatureImg(reader.result);
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!window.FileReader) {
+      alert('FileReader API not supported in this browser.');
+      return;
     }
-  };
 
-  const handleRemoveUploadedSignature = () => {
+    const reader = new FileReader();
+    reader.onload = () => setUploadSignatureImg(reader.result);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleRemoveUploadedSignature = useCallback(() => {
     setUploadSignatureImg('');
-  };
+  }, []);
 
-  const clearSignature = () => {
+  // Clear the canvas-based signature
+  const clearSignature = useCallback(() => {
     setSignatureData('');
-  };
+    if (signatureRef.current && signatureRef.current.clear) {
+      signatureRef.current.clear(); // If using a library like react-signature-canvas
+    }
+  }, []);
 
-  const handleCanvasEnd = () => {
-    if (signatureRef.current) {
+  // If using react-signature-canvas or similar, call this when the user finishes drawing
+  const handleCanvasEnd = useCallback(() => {
+    if (signatureRef.current && signatureRef.current.toDataURL) {
       setSignatureData(signatureRef.current.toDataURL());
     }
-  };
+  }, []);
 
-  const clearTypedSignature = () => {
+  // Clear typed signature
+  const clearTypedSignature = useCallback(() => {
     setTypedSignature('');
-  };
+  }, []);
 
   return (
     <SignatureContext.Provider

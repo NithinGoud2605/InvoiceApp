@@ -1,5 +1,4 @@
-// src/components/Invoicecomp/CreateInvoice/Sections/InvoiceDetails.jsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Box, TextField, Typography } from '@mui/material';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -11,29 +10,39 @@ const InvoiceDetails = () => {
   const { control, register, setValue } = useFormContext();
   const { t } = useTranslation();
 
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('details.invoiceLogo', reader.result); // Store base64 image
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Upload user-selected logo as a base64-encoded string
+  const handleLogoUpload = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('details.invoiceLogo', reader.result); // Store base64 image in the form
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    [setValue]
+  );
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>{t("form.steps.invoiceDetails.heading")}:</Typography>
+      <Typography variant="h6" gutterBottom>
+        {t('form.steps.invoiceDetails.heading') || 'Invoice Details'}:
+      </Typography>
+
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        {/* Invoice Number */}
         <TextField
           {...register('details.invoiceNumber')}
-          label={t("form.steps.invoiceDetails.invoiceNumber")}
+          label={t('form.steps.invoiceDetails.invoiceNumber')}
           placeholder="Invoice number"
           fullWidth
           variant="outlined"
           size="small"
         />
+
+        {/* Invoice Date */}
         <Controller
           name="details.invoiceDate"
           control={control}
@@ -41,12 +50,21 @@ const InvoiceDetails = () => {
             <ReactDatePicker
               selected={field.value ? new Date(field.value) : null}
               onChange={field.onChange}
-              placeholderText={t("form.steps.invoiceDetails.issuedDate")}
+              placeholderText={t('form.steps.invoiceDetails.issuedDate')}
               dateFormat="MM/dd/yyyy"
-              customInput={<TextField fullWidth label={t("form.steps.invoiceDetails.issuedDate")} variant="outlined" size="small" />}
+              customInput={
+                <TextField
+                  fullWidth
+                  label={t('form.steps.invoiceDetails.issuedDate')}
+                  variant="outlined"
+                  size="small"
+                />
+              }
             />
           )}
         />
+
+        {/* Due Date */}
         <Controller
           name="details.dueDate"
           control={control}
@@ -54,27 +72,41 @@ const InvoiceDetails = () => {
             <ReactDatePicker
               selected={field.value ? new Date(field.value) : null}
               onChange={field.onChange}
-              placeholderText={t("form.steps.invoiceDetails.dueDate")}
+              placeholderText={t('form.steps.invoiceDetails.dueDate')}
               dateFormat="MM/dd/yyyy"
-              customInput={<TextField fullWidth label={t("form.steps.invoiceDetails.dueDate")} variant="outlined" size="small" />}
+              customInput={
+                <TextField
+                  fullWidth
+                  label={t('form.steps.invoiceDetails.dueDate')}
+                  variant="outlined"
+                  size="small"
+                />
+              }
             />
           )}
         />
+
+        {/* Currency */}
         <TextField
           {...register('details.currency')}
-          label={t("form.steps.invoiceDetails.currency")}
+          label={t('form.steps.invoiceDetails.currency')}
           placeholder="Select Currency"
           fullWidth
           variant="outlined"
           size="small"
         />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleLogoUpload}
-          style={{ marginTop: '16px' }}
-        />
+
+        {/* Invoice Logo Upload */}
+        <Box sx={{ mt: '16px' }}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleLogoUpload}
+          />
+        </Box>
       </Box>
+
+      {/* Template Selector */}
       <Box sx={{ mt: 3 }}>
         <TemplateSelector />
       </Box>

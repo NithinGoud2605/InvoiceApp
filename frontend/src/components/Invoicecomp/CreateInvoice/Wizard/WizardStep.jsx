@@ -8,11 +8,24 @@ const WizardStep = ({ children }) => {
   const { activeStep } = useWizard();
 
   return (
-    <Box sx={{ minHeight: '25rem', p: 4, boxShadow: 3, borderRadius: 2, backgroundColor: '#fff' }}>
+    <Box
+      sx={{
+        minHeight: '25rem',
+        p: 4,
+        boxShadow: 3,
+        borderRadius: 2,
+        backgroundColor: '#fff'
+      }}
+    >
+      {/* Progress bar & step indicators */}
       <WizardProgress />
-      <Fade in={true} timeout={500} key={activeStep}>
+
+      {/* Content transition */}
+      <Fade in key={activeStep} timeout={500}>
         <Box sx={{ my: 3 }}>{children}</Box>
       </Fade>
+
+      {/* Navigation buttons */}
       <WizardNavigation />
     </Box>
   );
